@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SuperCoach Draft Assistant 2026</title>
+<script src="players_data.js"></script>
+<style>
+:root {
+  --bg: #0f0f1a;
+  --bg2: #1a1a2e;
+  --bg3: #25253d;
+  --text: #e0e0e0;
+  --text2: #999;
+  --def: #4a9eff;
+  --mid: #4aff9e;
+  --ruc: #ffaa4a;
+  --fwd: #ff4a6a;
+  --dual: #c77dff;
+  --accent: #6c63ff;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
+  --border: #333355;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+button { cursor: pointer; font-family: inherit; }
+input, select { font-family: inherit; }
+
+/* Config Screen */
+#config-screen { max-width: 600px; margin: 0 auto; padding: 20px; }
+#config-screen h1 { text-align: center; font-size: 1.6rem; margin-bottom: 8px; }
+#config-screen .subtitle { text-align: center; color: var(--text2); margin-bottom: 30px; font-size: 0.9rem; }
+.config-group { background: var(--bg2); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); }
+.config-group h3 { font-size: 0.85rem; text-transform: uppercase; color: var(--text2); letter-spacing: 1px; margin-bottom: 12px; }
+.config-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.config-row label { font-size: 0.95rem; }
+.config-row input, .config-row select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 1rem; width: 80px; text-align: center; }
+.config-row select { width: auto; text-align: left; }
+.roster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.roster-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg); border-radius: 8px; padding: 8px 12px; }
+.roster-item .pos-badge { font-weight: 700; font-size: 0.85rem; width: 36px; }
+.roster-item input { width: 50px; }
+.pos-def { color: var(--def); }
+.pos-mid { color: var(--mid); }
+.pos-ruc { color: var(--ruc); }
+.pos-fwd { color: var(--fwd); }
+#start-btn { display: block; width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 700; margin-top: 20px; transition: opacity 0.2s; }
+#start-btn:hover { opacity: 0.9; }
+
+/* Draft Screen */
+#draft-screen { display: none; max-width: 900px; margin: 0 auto; padding: 8px; }
+.pick-bar { background: var(--bg2); border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; border: 1px solid var(--border); }
+.pick-bar .pick-info { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pick-bar .pick-num { font-size: 1.3rem; font-weight: 700; }
+.pick-bar .pick-num.my-turn { color: var(--green); }
+.pick-bar .next-pick { color: var(--text2); font-size: 0.85rem; }
+.pick-bar .pick-dots { display: flex; gap: 3px; margin-top: 8px; flex-wrap: wrap; }
+.pick-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border); font-size: 0; flex-shrink: 0; }
+.pick-dot.done { background: var(--text2); border-color: var(--text2); }
+.pick-dot.current { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.pick-dot.mine { border-color: var(--green); border-width: 2px; }
+.pick-dot.mine.done { background: var(--green); }
+
+/* Alerts */
+.alerts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.alert { padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; }
+.alert-cliff { background: rgba(234, 179, 8, 0.15); color: var(--yellow); border: 1px solid rgba(234, 179, 8, 0.3); }
+.alert-run { background: rgba(108, 99, 255, 0.15); color: #a09cff; border: 1px solid rgba(108, 99, 255, 0.3); }
+.alert-need { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.3); }
+.alert-myturn { background: rgba(34, 197, 94, 0.15); color: var(--green); border: 1px solid rgba(34, 197, 94, 0.3); font-size: 1rem; text-align: center; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 8px; background: var(--bg2); border-radius: 10px; padding: 4px; }
+.tab { flex: 1; padding: 10px 8px; border: none; background: transparent; color: var(--text2); font-size: 0.85rem; font-weight: 600; border-radius: 8px; transition: all 0.2s; }
+.tab.active { background: var(--accent); color: white; }
+.tab .badge { display: inline-block; background: var(--red); color: white; font-size: 0.7rem; border-radius: 10px; padding: 1px 6px; margin-left: 4px; vertical-align: middle; }
+
+/* Recommendations */
+.recs { display: flex; flex-direction: column; gap: 6px; }
+.rec-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px; transition: border-color 0.2s; }
+.rec-card:first-child { border-color: var(--green); }
+.rec-rank { font-size: 1.4rem; font-weight: 800; color: var(--text2); width: 30px; text-align: center; flex-shrink: 0; }
+.rec-card:first-child .rec-rank { color: var(--green); }
+.rec-info { flex: 1; min-width: 0; }
+.rec-name { font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rec-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; font-size: 0.8rem; color: var(--text2); }
+.rec-badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-tier { background: rgba(234, 179, 8, 0.2); color: var(--yellow); }
+.badge-tier-1 { background: rgba(234, 179, 8, 0.25); color: #fbbf24; }
+.badge-tier-2 { background: rgba(108, 99, 255, 0.2); color: #a09cff; }
+.badge-tier-3 { background: rgba(34, 197, 94, 0.2); color: var(--green); }
+.badge-dual { background: rgba(199, 125, 255, 0.2); color: var(--dual); }
+.badge-consistent { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+.badge-durable { background: rgba(74, 158, 255, 0.15); color: var(--def); }
+.badge-scarce { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+.rec-avg { font-size: 1.1rem; font-weight: 700; flex-shrink: 0; }
+.rec-vorp { font-size: 0.75rem; color: var(--green); font-weight: 600; }
+.pos-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+.pos-tag-DEF { background: rgba(74, 158, 255, 0.2); color: var(--def); }
+.pos-tag-MID { background: rgba(74, 255, 158, 0.2); color: var(--mid); }
+.pos-tag-RUC { background: rgba(255, 170, 74, 0.2); color: var(--ruc); }
+.pos-tag-FWD { background: rgba(255, 74, 106, 0.2); color: var(--fwd); }
+.rec-draft-btn { background: var(--green); color: #000; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; transition: opacity 0.2s; }
+.rec-draft-btn:hover { opacity: 0.85; }
+.rec-draft-btn.other { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+.rec-draft-btn.other:hover { border-color: var(--red); color: var(--red); }
+
+/* Players Tab */
+.search-bar { display: flex; gap: 8px; margin-bottom: 8px; }
+.search-bar input { flex: 1; background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: 1rem; outline: none; }
+.search-bar input:focus { border-color: var(--accent); }
+.pos-filters { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+.pos-filter { padding: 6px 12px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); border-radius: 8px; font-size: 0.8rem; font-weight: 600; }
+.pos-filter.active { border-color: var(--accent); color: white; background: var(--bg3); }
+.player-list { max-height: 60vh; overflow-y: auto; }
+.player-row { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); gap: 8px; cursor: pointer; transition: background 0.15s; }
+.player-row:hover { background: var(--bg3); }
+.player-row.drafted { opacity: 0.35; text-decoration: line-through; pointer-events: none; }
+.player-row .pl-name { flex: 1; font-weight: 600; font-size: 0.9rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-row .pl-team { color: var(--text2); font-size: 0.8rem; width: 40px; flex-shrink: 0; }
+.player-row .pl-avg { font-weight: 700; width: 45px; text-align: right; flex-shrink: 0; }
+.player-row .pl-vorp { font-size: 0.75rem; width: 55px; text-align: right; flex-shrink: 0; }
+.player-row .pl-vorp.positive { color: var(--green); }
+.player-row .pl-vorp.negative { color: var(--red); }
+
+/* My Team Tab */
+.my-team { display: flex; flex-direction: column; gap: 12px; }
+.team-pos-group { background: var(--bg2); border-radius: 10px; padding: 12px; border: 1px solid var(--border); }
+.team-pos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.team-pos-title { font-weight: 700; font-size: 0.95rem; }
+.team-pos-count { font-size: 0.8rem; color: var(--text2); }
+.team-pos-count .filled { color: var(--green); }
+.team-player { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.team-player:last-child { border-bottom: none; }
+.team-player .tp-avg { font-weight: 600; }
+.team-empty { color: var(--text2); font-size: 0.85rem; font-style: italic; padding: 4px 0; }
+
+/* Draft Log Tab */
+.draft-log { max-height: 60vh; overflow-y: auto; }
+.log-entry { display: flex; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border); gap: 8px; font-size: 0.85rem; }
+.log-entry.my-pick { background: rgba(34, 197, 94, 0.08); }
+.log-pick { font-weight: 700; color: var(--text2); width: 35px; flex-shrink: 0; }
+.log-name { flex: 1; font-weight: 600; }
+
+/* Undo */
+.undo-btn { position: fixed; bottom: 20px; right: 20px; background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.undo-btn:hover { border-color: var(--accent); }
+
+/* Confirmation modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--bg2); border-radius: 14px; padding: 24px; max-width: 360px; width: 90%; text-align: center; border: 1px solid var(--border); }
+.modal h3 { margin-bottom: 8px; font-size: 1.1rem; }
+.modal p { color: var(--text2); margin-bottom: 16px; font-size: 0.9rem; }
+.modal-btns { display: flex; gap: 8px; }
+.modal-btns button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 700; font-size: 0.95rem; }
+.modal-cancel { background: var(--bg3); color: var(--text); }
+.modal-confirm { background: var(--green); color: #000; }
+.modal-confirm.draft-other { background: var(--red); color: white; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .rec-card { padding: 10px; gap: 8px; }
+  .pick-bar .pick-num { font-size: 1.1rem; }
+  .rec-draft-btn { padding: 6px 10px; }
+}
+
+/* Risk badges */
+.badge-out { background: rgba(239, 68, 68, 0.25); color: #ff6b6b; }
+.badge-injured { background: rgba(255, 170, 74, 0.2); color: var(--ruc); }
+.badge-minor { background: rgba(234, 179, 8, 0.2); color: var(--yellow); }
+.badge-trade { background: rgba(74, 158, 255, 0.2); color: var(--def); }
+.badge-dpp-change { background: rgba(153, 153, 153, 0.2); color: #bbb; }
+.badge-late-mode { background: rgba(108, 99, 255, 0.15); color: #a09cff; border: 1px solid rgba(108, 99, 255, 0.3); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; text-align: center; }
+.badge-fragile { background: rgba(239, 68, 68, 0.25); color: #ff6b6b; }
+.badge-volatile { background: rgba(255, 170, 74, 0.15); color: var(--ruc); }
+.rec-trend { font-size: 0.7rem; color: var(--text2); display: inline-flex; gap: 1px; align-items: center; white-space: nowrap; }
+.trend-up { color: var(--green); }
+.trend-down { color: var(--red); }
+.trend-stable { color: var(--text2); }
+.fragile-swap { font-size: 0.7rem; color: #ff6b6b; margin-top: 2px; }
+.rec-ev { font-size: 0.75rem; color: var(--accent); font-weight: 600; }
+.hugo-risk-vlow { background: rgba(34, 197, 94, 0.2); color: var(--green); }
+.hugo-risk-low { background: rgba(74, 158, 255, 0.15); color: var(--def); }
+.hugo-risk-med { background: rgba(234, 179, 8, 0.2); color: var(--yellow); }
+.hugo-risk-high { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+.hugo-range { font-size: 0.7rem; color: var(--text2); font-weight: 600; }
+.hugo-range.steal { color: var(--green); }
+.hugo-range.reach { color: var(--red); }
+.hugo-note { font-size: 0.7rem; color: var(--text2); margin-top: 2px; font-style: italic; }
+.hugo-note .concern { color: var(--red); font-style: normal; }
+.hugo-note .opportunity { color: var(--green); font-style: normal; }
+
+/* League Charts */
+.chart-container { display: flex; flex-direction: column; gap: 12px; }
+.chart-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.chart-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 8px; }
+.chart-section canvas { width: 100%; display: block; }
+</style>
+</head>
+<body>
+
+<!-- CONFIG SCREEN -->
+<div id="config-screen">
+  <h1>SuperCoach Draft Assistant</h1>
+  <p class="subtitle">AFL 2026 — EV Scoring: Best Available × Availability</p>
+
+  <div class="config-group">
+    <h3>Draft Settings</h3>
+    <div class="config-row">
+      <label>Number of Teams</label>
+      <input type="number" id="cfg-teams" value="18" min="2" max="30">
+    </div>
+    <div class="config-row">
+      <label>Your Draft Position</label>
+      <input type="number" id="cfg-pos" value="12" min="1" max="30">
+    </div>
+    <div class="config-row">
+      <label>Total Rounds</label>
+      <input type="number" id="cfg-rounds" value="16" min="5" max="40">
+    </div>
+  </div>
+
+  <div class="config-group">
+    <h3>On-Field Roster</h3>
+    <div class="roster-grid">
+      <div class="roster-item">
+        <span class="pos-badge pos-def">DEF</span>
+        <input type="number" id="cfg-def" value="4" min="0" max="10">
+      </div>
+      <div class="roster-item">
+        <span class="pos-badge pos-mid">MID</span>
+        <input type="number" id="cfg-mid" value="4" min="0" max="12">
+      </div>
+      <div class="roster-item">
+        <span class="pos-badge pos-ruc">RUC</span>
+        <input type="number" id="cfg-ruc" value="1" min="0" max="4">
+      </div>
+      <div class="roster-item">
+        <span class="pos-badge pos-fwd">FWD</span>
+        <input type="number" id="cfg-fwd" value="4" min="0" max="10">
+      </div>
+    </div>
+  </div>
+
+  <div class="config-group">
+    <h3>Bench</h3>
+    <div class="roster-grid">
+      <div class="roster-item">
+        <span class="pos-badge pos-def">DEF</span>
+        <input type="number" id="cfg-bdef" value="0" min="0" max="6">
+      </div>
+      <div class="roster-item">
+        <span class="pos-badge pos-mid">MID</span>
+        <input type="number" id="cfg-bmid" value="1" min="0" max="6">
+      </div>
+      <div class="roster-item">
+        <span class="pos-badge pos-ruc">RUC</span>
+        <input type="number" id="cfg-bruc" value="1" min="0" max="4">
+      </div>
+      <div class="roster-item">
+        <span class="pos-badge pos-fwd">FWD</span>
+        <input type="number" id="cfg-bfwd" value="1" min="0" max="6">
+      </div>
+    </div>
+  </div>
+
+  <button id="start-btn" onclick="startDraft()">Start Draft</button>
+</div>
+
+<!-- DRAFT SCREEN -->
+<div id="draft-screen">
+  <div class="pick-bar">
+    <div class="pick-info">
+      <div class="pick-num" id="pick-label">Pick #1</div>
+      <div class="next-pick" id="next-pick-label"></div>
+    </div>
+    <div class="pick-dots" id="pick-dots"></div>
+  </div>
+
+  <div class="alerts" id="alerts"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="recs" onclick="switchTab('recs')">Picks</button>
+    <button class="tab" data-tab="players" onclick="switchTab('players')">Players</button>
+    <button class="tab" data-tab="team" onclick="switchTab('team')">My Team <span class="badge" id="team-count">0</span></button>
+    <button class="tab" data-tab="log" onclick="switchTab('log')">Log</button>
+    <button class="tab" data-tab="league" onclick="switchTab('league')">League</button>
+  </div>
+
+  <div id="tab-recs" class="tab-content">
+    <div class="recs" id="recs-list"></div>
+  </div>
+
+  <div id="tab-players" class="tab-content" style="display:none">
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search player name..." oninput="renderPlayers()">
+    </div>
+    <div class="pos-filters" id="pos-filters"></div>
+    <div class="player-list" id="player-list"></div>
+  </div>
+
+  <div id="tab-team" class="tab-content" style="display:none">
+    <div class="my-team" id="my-team"></div>
+  </div>
+
+  <div id="tab-log" class="tab-content" style="display:none">
+    <div class="draft-log" id="draft-log"></div>
+  </div>
+
+  <div id="tab-league" class="tab-content" style="display:none">
+    <div class="chart-container">
+      <div class="chart-section">
+        <h3 class="chart-title">League EV Projection</h3>
+        <canvas id="ev-chart"></canvas>
+      </div>
+      <div class="chart-section">
+        <h3 class="chart-title">Positional Supply</h3>
+        <canvas id="supply-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <button class="undo-btn" onclick="undoPick()">&#8630; Undo</button>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Draft Player?</h3>
+    <p id="modal-text"></p>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-confirm" id="modal-confirm" onclick="confirmModal()">Draft</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   STATE & CONFIG
+   ========================================================= */
+let state = {
+  phase: 'config',
+  config: {},
+  currentPick: 1,       // 1-indexed overall pick number
+  picks: [],            // { player, pickNum, isMyPick, pickPos }
+  myTeam: { DEF: [], MID: [], RUC: [], FWD: [] },
+  draftedNames: new Set(),
+  tiers: {},            // { DEF: { playerName: tierNum }, ... }
+  replacementLevels: {},
+  activeTab: 'recs',
+  posFilter: 'ALL',
+  modalCallback: null,
+};
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+function getPositions(player) {
+  const p = player.p;
+  if (p.includes('/')) {
+    return p.split('/');
+  }
+  return [p];
+}
+
+function playerHasPosition(player, pos) {
+  return getPositions(player).includes(pos);
+}
+
+function getPosClass(pos) {
+  if (pos === 'DEF') return 'pos-def';
+  if (pos === 'MID') return 'pos-mid';
+  if (pos === 'RUC') return 'pos-ruc';
+  if (pos === 'FWD') return 'pos-fwd';
+  return '';
+}
+
+function getMyPickNumbers() {
+  const { draftPos, numTeams, rounds } = state.config;
+  const picks = [];
+  for (let round = 0; round < rounds; round++) {
+    let pick;
+    if (round % 2 === 0) {
+      // Forward: 1,2,...,N
+      pick = round * numTeams + draftPos;
+    } else {
+      // Reverse: N,N-1,...,1
+      pick = round * numTeams + (numTeams - draftPos + 1);
+    }
+    picks.push(pick);
+  }
+  return picks;
+}
+
+function isMyPick(pickNum) {
+  return getMyPickNumbers().includes(pickNum);
+}
+
+function getNextMyPick() {
+  const myPicks = getMyPickNumbers();
+  return myPicks.find(p => p >= state.currentPick) || null;
+}
+
+function getPickGap() {
+  const myPicks = getMyPickNumbers();
+  const currentIdx = myPicks.findIndex(p => p >= state.currentPick);
+  if (currentIdx < 0 || currentIdx >= myPicks.length - 1) return 0;
+  return myPicks[currentIdx + 1] - myPicks[currentIdx];
+}
+
+function getPickTeam(pickNum) {
+  const { numTeams } = state.config;
+  const round = Math.ceil(pickNum / numTeams);
+  const posInRound = pickNum - (round - 1) * numTeams;
+  if (round % 2 === 1) {
+    return posInRound;  // Forward round
+  } else {
+    return numTeams - posInRound + 1;  // Reverse round
+  }
+}
+
+function getAvailable() {
+  return PLAYER_DATA.filter(p => !state.draftedNames.has(p.n));
+}
+
+function getRosterNeeds() {
+  const { roster, bench } = state.config;
+  const needs = {};
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    const total = roster[pos] + bench[pos];
+    const have = state.myTeam[pos].length;
+    needs[pos] = Math.max(0, total - have);
+  }
+  return needs;
+}
+
+function getMyTotalPicks() {
+  let total = 0;
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    total += state.myTeam[pos].length;
+  }
+  return total;
+}
+
+/* =========================================================
+   LEAGUE CHARTS — All-Team Rosters & Canvas Drawing
+   ========================================================= */
+function buildAllTeamRosters(picksSubset) {
+  const { numTeams, roster, bench } = state.config;
+  const teams = {};
+  for (let t = 1; t <= numTeams; t++) {
+    teams[t] = { DEF: [], MID: [], RUC: [], FWD: [] };
+  }
+  for (const pick of picksSubset) {
+    const teamNum = getPickTeam(pick.pickNum);
+    if (pick.isMyPick && pick.pickPos) {
+      teams[teamNum][pick.pickPos].push(pick.player);
+    } else {
+      // Opponent pick: assign to position with most remaining need
+      const positions = getPositions(pick.player);
+      let bestPos = positions[0];
+      let bestNeed = -1;
+      for (const pos of positions) {
+        const total = roster[pos] + bench[pos];
+        const have = teams[teamNum][pos].length;
+        const need = total - have;
+        if (need > bestNeed) { bestNeed = need; bestPos = pos; }
+      }
+      teams[teamNum][bestPos].push(pick.player);
+    }
+  }
+  return teams;
+}
+
+function calcTeamSeasonEV(teamRoster) {
+  const { roster, bench } = state.config;
+  let totalEV = 0;
+  const WEEKS = 24;
+  const BENCH_FACTOR = 0.50;
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    const players = [...teamRoster[pos]];
+    // Sort by EV descending
+    players.sort((a, b) => {
+      const evA = a.a * (1 - getWeeklyMissRate(a));
+      const evB = b.a * (1 - getWeeklyMissRate(b));
+      return evB - evA;
+    });
+    const starterCount = roster[pos];
+    for (let i = 0; i < players.length; i++) {
+      const ev = players[i].a * (1 - getWeeklyMissRate(players[i]));
+      if (i < starterCount) {
+        totalEV += ev * WEEKS;
+      } else {
+        totalEV += ev * WEEKS * BENCH_FACTOR;
+      }
+    }
+  }
+  return totalEV;
+}
+
+function getTeamNames() {
+  const { numTeams, draftPos } = state.config;
+  const names = {};
+  for (let t = 1; t <= numTeams; t++) {
+    if (t === draftPos) { names[t] = 'You'; continue; }
+    // Find first player drafted by this team
+    const firstPick = state.picks.find(p => getPickTeam(p.pickNum) === t);
+    if (firstPick) {
+      // Use surname only (last word of name) to keep labels short
+      const parts = firstPick.player.n.split(' ');
+      names[t] = parts[parts.length - 1];
+    } else {
+      names[t] = 'T' + t;
+    }
+  }
+  return names;
+}
+
+// 18 distinct colours: gold for user, muted hues for opponents
+const TEAM_COLOURS = [
+  '#e06060', // muted red
+  '#e08a50', // muted orange
+  '#d4b040', // muted amber
+  '#80c050', // muted lime
+  '#50b868', // muted green
+  '#40b8a0', // muted teal
+  '#50a8c8', // muted cyan
+  '#6090d0', // muted blue
+  '#7878d8', // muted indigo
+  '#9868c8', // muted purple
+  '#b860b0', // muted magenta
+  '#d060a0', // muted pink
+  '#c87878', // muted coral
+  '#a09060', // muted khaki
+  '#70a878', // muted sage
+  '#6898a8', // muted slate
+  '#9080b0', // muted lavender
+];
+
+function getLeagueEVData() {
+  const { numTeams, rounds } = state.config;
+  const totalPicks = state.picks.length;
+  const teamLines = {};
+  for (let t = 1; t <= numTeams; t++) teamLines[t] = [];
+
+  // Build data point at end of each round + current partial round
+  const roundEnds = [];
+  for (let r = 1; r <= rounds; r++) {
+    const endPick = r * numTeams;
+    if (endPick <= totalPicks) {
+      roundEnds.push({ label: 'R' + r, pickCount: endPick });
+    }
+  }
+  // Add current state as latest point if we're mid-round
+  const lastCompleteRound = Math.floor(totalPicks / numTeams);
+  if (totalPicks > lastCompleteRound * numTeams || totalPicks === 0) {
+    const currentRound = lastCompleteRound + 1;
+    if (totalPicks > 0) {
+      roundEnds.push({ label: 'R' + currentRound + '*', pickCount: totalPicks });
+    }
+  }
+
+  let maxEV = 0;
+  for (const point of roundEnds) {
+    const subset = state.picks.slice(0, point.pickCount);
+    const rosters = buildAllTeamRosters(subset);
+    for (let t = 1; t <= numTeams; t++) {
+      const ev = calcTeamSeasonEV(rosters[t]);
+      teamLines[t].push(ev);
+      if (ev > maxEV) maxEV = ev;
+    }
+  }
+
+  return {
+    teamLines,
+    labels: roundEnds.map(r => r.label),
+    maxEV,
+    myTeamNum: state.config.draftPos,
+    numPoints: roundEnds.length,
+  };
+}
+
+function getSupplyData() {
+  const { numTeams, rounds } = state.config;
+  const totalPicks = state.picks.length;
+  const thresholds = state.qualityThresholds || state.replacementLevels || {};
+
+  const posLines = { DEF: [], MID: [], RUC: [], FWD: [] };
+  const labels = ['Start'];
+
+  // Initial supply (before any picks)
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    const quality = PLAYER_DATA.filter(p =>
+      playerHasPosition(p, pos) && p.a >= (thresholds[pos] || 0) &&
+      !(p.rk && p.rk.some(r => r.s === 'out'))
+    );
+    posLines[pos].push(quality.length);
+  }
+
+  // After each round + current partial round
+  const roundEnds = [];
+  for (let r = 1; r <= rounds; r++) {
+    const endPick = r * numTeams;
+    if (endPick <= totalPicks) {
+      roundEnds.push({ label: 'R' + r, pickCount: endPick });
+    }
+  }
+  const lastCompleteRound = Math.floor(totalPicks / numTeams);
+  if (totalPicks > lastCompleteRound * numTeams) {
+    roundEnds.push({ label: 'R' + (lastCompleteRound + 1) + '*', pickCount: totalPicks });
+  }
+
+  for (const point of roundEnds) {
+    labels.push(point.label);
+    const draftedSet = new Set(state.picks.slice(0, point.pickCount).map(p => p.player.n));
+    for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+      const quality = PLAYER_DATA.filter(p =>
+        playerHasPosition(p, pos) && p.a >= (thresholds[pos] || 0) &&
+        !draftedSet.has(p.n) &&
+        !(p.rk && p.rk.some(r => r.s === 'out'))
+      );
+      posLines[pos].push(quality.length);
+    }
+  }
+
+  return { posLines, labels };
+}
+
+function drawLineChart(canvas, config) {
+  const {
+    lines,        // [{ data: [...], color, width, opacity, label }]
+    labels,       // x-axis labels
+    yFormat,      // function(val) => string
+    height,       // canvas CSS height
+    showLegend,   // { items: [{ color, label }], position: 'top-right' }
+    highlightLast // { lineIndex, color } — draw dot + value at last point
+  } = config;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const cssW = rect.width - 24; // account for padding
+  const cssH = height;
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const margin = { top: 12, right: config.rightMargin || 60, bottom: 28, left: 50 };
+  const w = cssW - margin.left - margin.right;
+  const h = cssH - margin.top - margin.bottom;
+
+  // Clear
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  // Find y range
+  let yMin = Infinity, yMax = -Infinity;
+  for (const line of lines) {
+    for (const v of line.data) {
+      if (v < yMin) yMin = v;
+      if (v > yMax) yMax = v;
+    }
+  }
+  if (yMin === Infinity) { yMin = 0; yMax = 100; }
+  if (yMax === yMin) { yMax = yMin + 100; }
+  // Add 10% padding
+  const yRange = yMax - yMin;
+  yMin = Math.max(0, yMin - yRange * 0.1);
+  yMax = yMax + yRange * 0.1;
+
+  const numPoints = labels.length;
+  const xStep = numPoints > 1 ? w / (numPoints - 1) : w;
+
+  function toX(i) { return margin.left + i * xStep; }
+  function toY(v) { return margin.top + h - ((v - yMin) / (yMax - yMin)) * h; }
+
+  // Grid lines
+  const yTicks = 5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= yTicks; i++) {
+    const val = yMin + (yMax - yMin) * (i / yTicks);
+    const y = toY(val);
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(margin.left + w, y);
+    ctx.stroke();
+
+    // Y-axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '10px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(yFormat ? yFormat(val) : Math.round(val).toString(), margin.left - 6, y + 3);
+  }
+
+  // X-axis labels
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '10px -apple-system, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  // Show every label if <= 18, else skip some
+  const labelSkip = numPoints > 18 ? Math.ceil(numPoints / 16) : 1;
+  for (let i = 0; i < numPoints; i++) {
+    if (i % labelSkip === 0 || i === numPoints - 1) {
+      ctx.fillText(labels[i], toX(i), cssH - 4);
+    }
+  }
+
+  // Draw lines (non-highlighted first, highlighted last so it's on top)
+  const drawOrder = lines.map((l, i) => i);
+  if (config.highlightLast) {
+    const hlIdx = config.highlightLast.lineIndex;
+    const idx = drawOrder.indexOf(hlIdx);
+    if (idx >= 0) { drawOrder.splice(idx, 1); drawOrder.push(hlIdx); }
+  }
+
+  for (const li of drawOrder) {
+    const line = lines[li];
+    if (line.data.length < 1) continue;
+    ctx.strokeStyle = line.color;
+    ctx.lineWidth = line.width || 1;
+    ctx.globalAlpha = line.opacity !== undefined ? line.opacity : 1;
+    ctx.beginPath();
+    ctx.moveTo(toX(0), toY(line.data[0]));
+    for (let i = 1; i < line.data.length; i++) {
+      ctx.lineTo(toX(i), toY(line.data[i]));
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Ranked sidebar legend (stacked by EV, highest first)
+  if (config.rankedLegend) {
+    const ranked = lines
+      .map((line, i) => {
+        if (!line.data.length || !line.label) return null;
+        const lastVal = line.data[line.data.length - 1];
+        return { line, val: lastVal };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.val - a.val); // highest EV first
+
+    const legendX = margin.left + w + 12;
+    const ROW_H = Math.min(18, (h - 4) / ranked.length);
+    let legendY = margin.top + 4;
+
+    for (let r = 0; r < ranked.length; r++) {
+      const { line, val } = ranked[r];
+      const isMe = line.highlight;
+      const rank = r + 1;
+
+      // Colour bar
+      ctx.fillStyle = line.color;
+      ctx.globalAlpha = isMe ? 1 : 0.7;
+      ctx.fillRect(legendX, legendY, 10, ROW_H - 4);
+
+      // Rank number
+      ctx.fillStyle = isMe ? '#ffd700' : 'rgba(255,255,255,0.4)';
+      ctx.globalAlpha = isMe ? 1 : 0.6;
+      ctx.font = isMe
+        ? 'bold 10px -apple-system, system-ui, sans-serif'
+        : '9px -apple-system, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(rank + '.', legendX + 14, legendY + ROW_H - 7);
+
+      // Name
+      ctx.fillStyle = isMe ? '#ffd700' : 'rgba(255,255,255,0.55)';
+      ctx.fillText(line.label, legendX + 28, legendY + ROW_H - 7);
+
+      // EV value (right-aligned)
+      const valStr = yFormat ? yFormat(val) : Math.round(val).toString();
+      ctx.textAlign = 'right';
+      ctx.fillText(valStr, cssW - 4, legendY + ROW_H - 7);
+
+      ctx.globalAlpha = 1;
+      legendY += ROW_H;
+    }
+  }
+
+  // Highlight dot + value on user's team
+  if (config.highlightLast && !config.rankedLegend) {
+    const hl = config.highlightLast;
+    const line = lines[hl.lineIndex];
+    if (line && line.data.length > 0) {
+      const lastIdx = line.data.length - 1;
+      const x = toX(lastIdx);
+      const y = toY(line.data[lastIdx]);
+
+      // Dot
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = hl.color;
+      ctx.fill();
+
+      // Value label
+      ctx.fillStyle = hl.color;
+      ctx.font = 'bold 11px -apple-system, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      const valStr = yFormat ? yFormat(line.data[lastIdx]) : Math.round(line.data[lastIdx]).toString();
+      ctx.fillText(valStr, x + 8, y + 4);
+    }
+  }
+
+  // Legend
+  if (showLegend && showLegend.items) {
+    const legendX = margin.left + w - 10;
+    let legendY = margin.top + 8;
+    ctx.textAlign = 'right';
+    ctx.font = '10px -apple-system, system-ui, sans-serif';
+    for (const item of showLegend.items) {
+      ctx.fillStyle = item.color;
+      ctx.fillRect(legendX + 4, legendY - 6, 12, 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillText(item.label, legendX, legendY);
+      legendY += 14;
+    }
+  }
+}
+
+function renderLeagueCharts() {
+  if (state.picks.length === 0 && state.phase === 'config') return;
+
+  // EV Projection Chart
+  const evData = getLeagueEVData();
+  const evCanvas = document.getElementById('ev-chart');
+  if (!evCanvas) return;
+
+  const evLines = [];
+  const myTeamNum = evData.myTeamNum;
+  const teamNames = getTeamNames();
+  let colourIdx = 0;
+  for (let t = 1; t <= state.config.numTeams; t++) {
+    const isMe = t === myTeamNum;
+    const colour = isMe ? '#ffd700' : TEAM_COLOURS[colourIdx++ % TEAM_COLOURS.length];
+    evLines.push({
+      data: evData.teamLines[t] || [],
+      color: colour,
+      width: isMe ? 2.5 : 1.2,
+      opacity: isMe ? 1 : 0.55,
+      label: teamNames[t],
+      highlight: isMe,
+    });
+  }
+
+  drawLineChart(evCanvas, {
+    lines: evLines,
+    labels: evData.labels.length > 0 ? evData.labels : ['Start'],
+    yFormat: v => {
+      if (v >= 1000) return (v / 1000).toFixed(1) + 'k';
+      return Math.round(v).toString();
+    },
+    height: 400,
+    rankedLegend: true,
+    rightMargin: 140,
+  });
+
+  // Supply Curve Chart
+  const supplyData = getSupplyData();
+  const supplyCanvas = document.getElementById('supply-chart');
+  if (!supplyCanvas) return;
+
+  const posColors = { DEF: '#4a9eff', MID: '#4aff9e', RUC: '#ffaa4a', FWD: '#ff4a6a' };
+  const supplyLines = [];
+  const legendItems = [];
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    const data = supplyData.posLines[pos];
+    const currentCount = data.length > 0 ? data[data.length - 1] : 0;
+    supplyLines.push({
+      data,
+      color: posColors[pos],
+      width: 2,
+      opacity: 1,
+    });
+    legendItems.push({ color: posColors[pos], label: `${pos}: ${currentCount}` });
+  }
+
+  drawLineChart(supplyCanvas, {
+    lines: supplyLines,
+    labels: supplyData.labels,
+    yFormat: v => Math.round(v).toString(),
+    height: 250,
+    showLegend: { items: legendItems },
+  });
+}
+
+/* =========================================================
+   PSSV & SCORING ENGINE
+   ========================================================= */
+function calculateReplacementLevels(available) {
+  const { numTeams, roster, bench } = state.config;
+  const levels = {};
+  const scarcity = {};
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    const posPlayers = available.filter(p => playerHasPosition(p, pos));
+    posPlayers.sort((a, b) => b.a - a.a);
+    // Total demand: every team needs starters + bench at each position
+    const totalDemand = numTeams * (roster[pos] + bench[pos]);
+    const supply = posPlayers.length;
+    // Scarcity ratio: < 1 means not enough players exist for all teams
+    scarcity[pos] = supply / totalDemand;
+    // Replacement level: the last player who would be drafted
+    const replIdx = Math.min(totalDemand, supply - 1);
+    levels[pos] = replIdx >= 0 ? (posPlayers[replIdx]?.a || 0) : 0;
+  }
+  state.replacementLevels = levels;
+  state.scarcity = scarcity;
+  return levels;
+}
+
+function calculateTiers(available) {
+  const tiers = {};
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    const posPlayers = available.filter(p => playerHasPosition(p, pos));
+    posPlayers.sort((a, b) => b.a - a.a);
+
+    if (posPlayers.length < 3) {
+      tiers[pos] = {};
+      posPlayers.forEach((p, i) => { tiers[pos][p.n] = 1; });
+      continue;
+    }
+
+    // Calculate gaps
+    const gaps = [];
+    for (let i = 0; i < posPlayers.length - 1; i++) {
+      gaps.push({ index: i, gap: posPlayers[i].a - posPlayers[i + 1].a });
+    }
+
+    // Find natural break points (top 4 largest gaps)
+    const sorted = [...gaps].sort((a, b) => b.gap - a.gap);
+    const minGap = pos === 'RUC' ? 2 : 3; // Lower threshold for rucks (fewer players)
+    const breaks = sorted
+      .filter(g => g.gap >= minGap)
+      .slice(0, 5)
+      .map(g => g.index)
+      .sort((a, b) => a - b);
+
+    tiers[pos] = {};
+    let tier = 1;
+    for (let i = 0; i < posPlayers.length; i++) {
+      tiers[pos][posPlayers[i].n] = tier;
+      if (breaks.includes(i)) tier++;
+    }
+  }
+  state.tiers = tiers;
+  return tiers;
+}
+
+function getPlayerTier(player) {
+  const positions = getPositions(player);
+  let bestTier = 99;
+  for (const pos of positions) {
+    const t = state.tiers[pos]?.[player.n];
+    if (t && t < bestTier) bestTier = t;
+  }
+  return bestTier === 99 ? 6 : bestTier;
+}
+
+function getTierLabel(tier) {
+  if (tier === 1) return 'Elite';
+  if (tier === 2) return 'Premium';
+  if (tier === 3) return 'Solid';
+  if (tier === 4) return 'Role Player';
+  return 'Depth';
+}
+
+function getConsistencyScore(player) {
+  if (!player.g || player.g < 3) return 0;
+  const rate100 = player.s1 / player.g;
+  return rate100; // 0 to 1
+}
+
+function getDurabilityScore(player) {
+  if (player.g >= 22) return 1;
+  if (player.g >= 17) return 0.7;
+  if (player.g >= 12) return 0.4;
+  return 0.1;
+}
+
+function getWeeklyMissRate(player) {
+  let baseRate;
+  if (player.g >= 22) baseRate = 0.05;
+  else if (player.g >= 17) baseRate = 0.15;
+  else if (player.g >= 12) baseRate = 0.30;
+  else baseRate = 0.45;
+  if (player.rk && player.rk.some(r => r.s === 'out')) return 1.0;
+  // No Hugo adjustment — games played already captures injury risk
+  return baseRate;
+}
+
+function getTrendData(player) {
+  const seasons = [];
+  if (player.a23 && player.a23 > 0) seasons.push({ yr: '23', avg: player.a23 });
+  if (player.a24 && player.a24 > 0) seasons.push({ yr: '24', avg: player.a24 });
+  seasons.push({ yr: '25', avg: player.a });
+  if (seasons.length < 2) return { trend: 'none', seasons, spread: 0 };
+  const last = seasons[seasons.length - 1].avg;
+  const prev = seasons[seasons.length - 2].avg;
+  const diff = last - prev;
+  const trend = diff > 5 ? 'up' : diff < -5 ? 'down' : 'stable';
+  const avgs = seasons.map(s => s.avg);
+  const spread = Math.max(...avgs) - Math.min(...avgs);
+  return { trend, seasons, spread };
+}
+
+function getRecommendations() {
+  const available = getAvailable();
+  const levels = calculateReplacementLevels(available);
+  calculateTiers(available);
+  const needs = getRosterNeeds();
+  const totalNeeds = Object.values(needs).reduce((s, v) => s + v, 0);
+
+  const totalSlots = Object.values(state.config.roster).reduce((s, v) => s + v, 0)
+    + Object.values(state.config.bench).reduce((s, v) => s + v, 0);
+
+  // Pick gap for PSSV calculation (display only)
+  const gap = getPickGap() || 1;
+
+  // Demand share per position
+  const demandShare = {};
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    demandShare[pos] = (state.config.roster[pos] + state.config.bench[pos]) / totalSlots;
+  }
+
+  // Available players per position (sorted by avg, excluding out-for-season)
+  const availByPos = {};
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    availByPos[pos] = available
+      .filter(p => playerHasPosition(p, pos) && !(p.rk && p.rk.some(r => r.s === 'out')))
+      .sort((a, b) => b.a - a.a);
+  }
+
+  // PSSV per position (display only — not used in scoring)
+  const positionalPSSV = {};
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    const avail = availByPos[pos];
+    if (avail.length <= 1) { positionalPSSV[pos] = 0; continue; }
+    const bestNow = avail[0].a;
+    const expectedTaken = Math.max(1, Math.round(gap * demandShare[pos]));
+    const bestAfterIdx = Math.min(expectedTaken, avail.length - 1);
+    const bestAfter = avail[bestAfterIdx].a;
+    positionalPSSV[pos] = Math.max(0, bestNow - bestAfter);
+  }
+  state.positionalPSSV = positionalPSSV;
+
+  // === TIER CLIFF DETECTION ===
+  // Detect positions where the last elite/premium player is about to disappear
+  const tierCliffBonus = { DEF: 0, MID: 0, RUC: 0, FWD: 0 };
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    if (needs[pos] <= 0) continue;
+    const posAvail = availByPos[pos];
+    if (posAvail.length < 2) continue;
+
+    // Find tier 1 and tier 2 players at this position
+    const tier1 = posAvail.filter(p => (state.tiers[pos]?.[p.n] || 99) === 1);
+    const tier2 = posAvail.filter(p => (state.tiers[pos]?.[p.n] || 99) === 2);
+
+    if (tier1.length > 0 && tier1.length <= 2) {
+      // Last 1-2 elite players — calculate cliff size
+      const lastEliteAvg = tier1[tier1.length - 1].a;
+      const nextTierAvg = tier2.length > 0 ? tier2[0].a :
+        posAvail.find(p => (state.tiers[pos]?.[p.n] || 99) > 1)?.a || 0;
+      const cliffSize = lastEliteAvg - nextTierAvg;
+      if (cliffSize >= 3) {
+        tierCliffBonus[pos] = tier1.length === 1 ? Math.min(6, cliffSize * 0.4) : Math.min(4, cliffSize * 0.3);
+      }
+    } else if (tier1.length === 0 && tier2.length > 0 && tier2.length <= 2) {
+      // No elites left, last 1-2 premium players
+      const lastPremAvg = tier2[tier2.length - 1].a;
+      const nextTierAvg = posAvail.find(p => (state.tiers[pos]?.[p.n] || 99) > 2)?.a || 0;
+      const cliffSize = lastPremAvg - nextTierAvg;
+      if (cliffSize >= 3) {
+        tierCliffBonus[pos] = tier2.length === 1 ? Math.min(4, cliffSize * 0.3) : Math.min(2, cliffSize * 0.2);
+      }
+    }
+  }
+  state.tierCliffBonus = tierCliffBonus;
+
+  // === SCORE EACH PLAYER: SMART NAIVE ===
+  const scored = available.map(player => {
+    const positions = getPositions(player);
+    const isOutForSeason = player.rk && player.rk.some(r => r.s === 'out');
+
+    // VORP for display only
+    let bestVORP = -Infinity;
+    let bestPos = positions[0];
+    for (const pos of positions) {
+      const rawV = player.a - (levels[pos] || 0);
+      if (rawV > bestVORP) { bestVORP = rawV; bestPos = pos; }
+    }
+
+    // Quality metrics for UI display
+    const consistency = getConsistencyScore(player);
+    const durability = getDurabilityScore(player);
+    const missRate = getWeeklyMissRate(player);
+    const trendData = getTrendData(player);
+    const evScore = player.a * (1 - missRate);
+
+    // PSSV for display only
+    let bestPSSV = -1;
+    for (const pos of positions) {
+      if (needs[pos] > 0 && positionalPSSV[pos] > bestPSSV) {
+        bestPSSV = positionalPSSV[pos];
+      }
+    }
+    if (bestPSSV < 0) bestPSSV = 0;
+
+    // ========================================
+    // EV SCORING
+    // Score = avg × (1 - missRate)
+    // Shifted thresholds (g>=22/17/12), no Hugo adjustment
+    // Validated: +951 season pts vs Naive (p<0.001) on real 2025 data
+    // Robust across 13 tier configs — ALL beat Naive significantly
+    // ========================================
+
+    // 1. EV SCORE: average adjusted for availability
+    let evMissRate;
+    if (player.g >= 22) evMissRate = 0.05;
+    else if (player.g >= 17) evMissRate = 0.15;
+    else if (player.g >= 12) evMissRate = 0.30;
+    else evMissRate = 0.45;
+    if (isOutForSeason) evMissRate = 1.0;
+
+    let score = player.a * (1 - evMissRate);
+
+    // Still compute penalties/bonuses for DISPLAY ONLY (badges, info)
+    const isFragile = player.a >= 90 && player.g < 15 && !isOutForSeason;
+    let fragilePenalty = 0;
+    if (isFragile) {
+      fragilePenalty = (15 - player.g) * 0.7;
+    }
+
+    let hugoRiskPenalty = 0;
+    if (player.hr === 'High') { hugoRiskPenalty = 4; }
+    else if (player.hr === 'Medium') { hugoRiskPenalty = 1.5; }
+
+    let trendBonus = 0;
+    if (trendData.seasons.length >= 2) {
+      if (trendData.trend === 'up') { trendBonus = 2; }
+      else if (trendData.trend === 'down') { trendBonus = -2; }
+    }
+
+    let cliffBonus = 0;
+    for (const pos of positions) {
+      if (needs[pos] > 0 && tierCliffBonus[pos] > 0) {
+        const playerTierAtPos = state.tiers[pos]?.[player.n] || 99;
+        const isAtCliff = (tierCliffBonus[pos] > 3 && playerTierAtPos === 1) ||
+                          (tierCliffBonus[pos] <= 3 && playerTierAtPos <= 2);
+        if (isAtCliff && tierCliffBonus[pos] > cliffBonus) {
+          cliffBonus = tierCliffBonus[pos];
+        }
+      }
+    }
+
+    // HARD CONSTRAINTS (unchanged)
+    if (isOutForSeason) score -= 9999;
+    const canFillNeeded = positions.some(pos => needs[pos] > 0);
+    if (!canFillNeeded && totalNeeds > 0) score -= 9999;
+
+    // Determine fill position: prefer position with highest need
+    let fillPos = positions[0];
+    let bestFillNeed = -1;
+    for (const pos of positions) {
+      if (needs[pos] > 0 && needs[pos] > bestFillNeed) {
+        fillPos = pos;
+        bestFillNeed = needs[pos];
+      }
+    }
+
+    // Find durable swap suggestion for fragile players
+    let fragileSwap = null;
+    if (isFragile) {
+      const durableAlt = available
+        .filter(d => d.g >= 22 && d.a >= evScore - 5 && d.n !== player.n &&
+          positions.some(pos => playerHasPosition(d, pos)))
+        .sort((a, b) => b.a - a.a)[0];
+      if (durableAlt) {
+        fragileSwap = `${durableAlt.n} (${durableAlt.a} avg, ${durableAlt.g}gm)`;
+      }
+    }
+
+    return {
+      ...player,
+      vorp: bestVORP,
+      pssv: bestPSSV,
+      evScore,
+      adjustedScore: score,
+      bestPos,
+      fillPos,
+      positions,
+      tier: getPlayerTier(player),
+      consistency,
+      durability,
+      missRate,
+      trendData,
+      isFragile,
+      fragileSwap,
+      fragilePenalty,
+      trendBonus,
+      cliffBonus,
+      hugoRiskPenalty,
+    };
+  });
+
+  state.lateDraftMode = false;
+  scored.sort((a, b) => b.adjustedScore - a.adjustedScore);
+  return scored;
+}
+
+/* =========================================================
+   ALERTS
+   ========================================================= */
+function getAlerts() {
+  const alerts = [];
+  const available = getAvailable();
+  const needs = getRosterNeeds();
+  const isMyTurn = isMyPick(state.currentPick);
+
+  // My turn alert
+  if (isMyTurn) {
+    alerts.push({ type: 'myturn', text: "It's YOUR pick! Choose wisely." });
+  }
+
+  // Cliff alerts - last player(s) in a tier at a needed position
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    if (needs[pos] <= 0) continue;
+    const posAvail = available.filter(p => playerHasPosition(p, pos));
+    posAvail.sort((a, b) => b.a - a.a);
+
+    // Check top tiers (only for players with meaningful averages)
+    const minAvgForAlert = pos === 'RUC' ? 60 : 75;
+    for (let tierNum = 1; tierNum <= 2; tierNum++) {
+      const inTier = posAvail.filter(p =>
+        (state.tiers[pos]?.[p.n] || 99) === tierNum && p.a >= minAvgForAlert
+      );
+      if (inTier.length === 0) continue;
+      if (inTier.length === 1) {
+        const label = tierNum === 1 ? 'Elite' : 'Premium';
+        alerts.push({
+          type: 'cliff',
+          text: `Last ${label} ${pos}: ${inTier[0].n} (${inTier[0].a} avg)`
+        });
+      } else if (inTier.length === 2) {
+        const label = tierNum === 1 ? 'Elite' : 'Premium';
+        alerts.push({
+          type: 'cliff',
+          text: `Only 2 ${label} ${pos}s left: ${inTier[0].n}, ${inTier[1].n}`
+        });
+      }
+    }
+  }
+
+  // Run detection - last 5 picks same position
+  if (state.picks.length >= 3) {
+    const last5 = state.picks.slice(-5);
+    const posCounts = {};
+    last5.forEach(pick => {
+      getPositions(pick.player).forEach(pos => {
+        posCounts[pos] = (posCounts[pos] || 0) + 1;
+      });
+    });
+    for (const [pos, count] of Object.entries(posCounts)) {
+      if (count >= 3) {
+        alerts.push({
+          type: 'run',
+          text: `Run on ${pos}: ${count} of last ${last5.length} picks were ${pos}s`
+        });
+      }
+    }
+  }
+
+  // Position need warnings
+  const urgentNeeds = [];
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    if (needs[pos] > 0) {
+      const posAvail = available.filter(p => playerHasPosition(p, pos));
+      const aboveRepl = posAvail.filter(p => p.a > (state.replacementLevels[pos] || 0));
+      if (aboveRepl.length <= needs[pos] + 2) {
+        urgentNeeds.push(`${pos} (${needs[pos]} needed, ${aboveRepl.length} decent left)`);
+      }
+    }
+  }
+  if (urgentNeeds.length > 0) {
+    alerts.push({ type: 'need', text: `Position crunch: ${urgentNeeds.join(', ')}` });
+  }
+
+  return alerts;
+}
+
+/* =========================================================
+   DRAFT ACTIONS
+   ========================================================= */
+function draftPlayer(playerName, isMyPick) {
+  const player = PLAYER_DATA.find(p => p.n === playerName);
+  if (!player || state.draftedNames.has(playerName)) return;
+
+  state.draftedNames.add(playerName);
+  const pickNum = state.currentPick;
+
+  // Determine position for my team (prefer position with highest remaining need)
+  let pickPos = null;
+  if (isMyPick) {
+    const positions = getPositions(player);
+    const needs = getRosterNeeds();
+    pickPos = positions[0];
+    let maxNeed = -1;
+    for (const pos of positions) {
+      if (needs[pos] > 0 && needs[pos] > maxNeed) {
+        maxNeed = needs[pos];
+        pickPos = pos;
+      }
+    }
+    // Fallback: if no needed position, use position with most room
+    if (maxNeed < 0) {
+      let bestRoom = -1;
+      for (const pos of positions) {
+        const room = (state.config.roster[pos] + state.config.bench[pos]) - state.myTeam[pos].length;
+        if (room > bestRoom) { bestRoom = room; pickPos = pos; }
+      }
+    }
+    state.myTeam[pickPos].push(player);
+  }
+
+  state.picks.push({ player, pickNum, isMyPick, pickPos });
+  state.currentPick++;
+  render();
+}
+
+function undoPick() {
+  if (state.picks.length === 0) return;
+  const last = state.picks.pop();
+  state.draftedNames.delete(last.player.n);
+  state.currentPick--;
+
+  if (last.isMyPick && last.pickPos) {
+    const arr = state.myTeam[last.pickPos];
+    const idx = arr.findIndex(p => p.n === last.player.n);
+    if (idx >= 0) arr.splice(idx, 1);
+  }
+  render();
+}
+
+function showDraftModal(playerName, asMyPick) {
+  const player = PLAYER_DATA.find(p => p.n === playerName);
+  if (!player) return;
+
+  const modal = document.getElementById('modal');
+  const title = document.getElementById('modal-title');
+  const text = document.getElementById('modal-text');
+  const btn = document.getElementById('modal-confirm');
+
+  if (asMyPick) {
+    title.textContent = 'Draft to Your Team?';
+    text.innerHTML = `<strong>${player.n}</strong> (${player.p}) — ${player.a} avg`;
+    if (player.rk) {
+      const warnings = player.rk.map(r => {
+        if (r.s === 'out') return `<span style="color:#ff6b6b;font-weight:700;">⚠ ${r.l}</span>`;
+        if (r.s === 'high') return `<span style="color:var(--ruc);font-weight:600;">⚠ ${r.l}</span>`;
+        if (r.s === 'med') return `<span style="color:var(--yellow);">⚠ ${r.l}</span>`;
+        return `<span style="color:var(--def);">ℹ ${r.l}</span>`;
+      });
+      text.innerHTML += '<br>' + warnings.join('<br>');
+    }
+    btn.textContent = 'Draft!';
+    btn.className = 'modal-confirm';
+  } else {
+    title.textContent = 'Mark as Drafted?';
+    text.innerHTML = `<strong>${player.n}</strong> drafted by another team`;
+    btn.textContent = 'Mark Drafted';
+    btn.className = 'modal-confirm draft-other';
+  }
+
+  state.modalCallback = () => draftPlayer(playerName, asMyPick);
+  modal.classList.add('show');
+}
+
+function confirmModal() {
+  if (state.modalCallback) state.modalCallback();
+  closeModal();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  state.modalCallback = null;
+}
+
+/* =========================================================
+   RENDERING
+   ========================================================= */
+function render() {
+  renderPickBar();
+  renderAlerts();
+  renderRecs();
+  renderPlayers();
+  renderMyTeam();
+  renderLog();
+  updateTabBadges();
+  if (state.activeTab === 'league') renderLeagueCharts();
+}
+
+function renderPickBar() {
+  const myTurn = isMyPick(state.currentPick);
+  const label = document.getElementById('pick-label');
+  const team = getPickTeam(state.currentPick);
+  label.textContent = myTurn ? `Pick #${state.currentPick} — YOUR TURN` : `Pick #${state.currentPick} — Team ${team}`;
+  label.className = 'pick-num' + (myTurn ? ' my-turn' : '');
+
+  const nextPick = getNextMyPick();
+  const nextLabel = document.getElementById('next-pick-label');
+  if (nextPick && nextPick > state.currentPick) {
+    const gap = nextPick - state.currentPick;
+    nextLabel.textContent = `Your next: Pick #${nextPick} (${gap} away) | Gap after: ${getPickGap()}`;
+  } else if (nextPick === state.currentPick) {
+    nextLabel.textContent = `This is your pick! | Gap after: ${getPickGap()}`;
+  } else {
+    nextLabel.textContent = 'No more picks';
+  }
+
+  // Pick dots (show current round context)
+  const { numTeams } = state.config;
+  const currentRound = Math.ceil(state.currentPick / numTeams);
+  const roundStart = (currentRound - 1) * numTeams + 1;
+  const roundEnd = currentRound * numTeams;
+  const myPicks = new Set(getMyPickNumbers());
+
+  let dots = '';
+  for (let i = roundStart; i <= roundEnd; i++) {
+    let cls = 'pick-dot';
+    if (i < state.currentPick) cls += ' done';
+    if (i === state.currentPick) cls += ' current';
+    if (myPicks.has(i)) cls += ' mine';
+    if (myPicks.has(i) && i < state.currentPick) cls += ' done';
+    dots += `<div class="${cls}" title="Pick ${i} (Team ${getPickTeam(i)})"></div>`;
+  }
+  document.getElementById('pick-dots').innerHTML = dots;
+}
+
+function renderAlerts() {
+  const alerts = getAlerts();
+  const container = document.getElementById('alerts');
+  if (alerts.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = alerts.map(a =>
+    `<div class="alert alert-${a.type}">${a.text}</div>`
+  ).join('');
+}
+
+function renderRecs() {
+  const recs = getRecommendations();
+  const myTurn = isMyPick(state.currentPick);
+  const filtered = recs.filter(p => !(p.rk && p.rk.some(r => r.s === 'out')));
+  const top = filtered.slice(0, 10);
+  const container = document.getElementById('recs-list');
+  let lateMode = '';
+  if (state.lateDraftMode) {
+    lateMode = '<div class="badge-late-mode">Late-Draft Mode Active — scoring simplified for best remaining value</div>';
+  }
+
+  container.innerHTML = lateMode + top.map((p, i) => {
+    const tierLabel = getTierLabel(p.tier);
+    const tierClass = p.tier <= 1 ? 'badge-tier-1' : p.tier <= 2 ? 'badge-tier-2' : 'badge-tier-3';
+
+    let badges = `<span class="badge ${tierClass}">${tierLabel}</span>`;
+    // Hugo risk badge (expert assessment) — replaces our games-played guess
+    if (p.hr) {
+      const riskClass = p.hr === 'Very Low' ? 'hugo-risk-vlow' : p.hr === 'Low' ? 'hugo-risk-low' : p.hr === 'Medium' ? 'hugo-risk-med' : 'hugo-risk-high';
+      badges += `<span class="badge ${riskClass}">${p.hr} Risk</span>`;
+    }
+    if (p.positions.length > 1) badges += `<span class="badge badge-dual">DUAL POS</span>`;
+    if (p.consistency > 0.7) badges += `<span class="badge badge-consistent">CONSISTENT</span>`;
+    if (p.isFragile) badges += `<span class="badge badge-fragile">FRAGILE (${p.g}gm)</span>`;
+    if (p.cliffBonus > 0) badges += `<span class="badge badge-scarce">TIER CLIFF +${p.cliffBonus.toFixed(0)}</span>`;
+    if (p.trendData.spread > 25 && p.trendData.seasons.length >= 2) badges += `<span class="badge badge-volatile">VOLATILE</span>`;
+
+    // Risk badges
+    if (p.rk) {
+      for (const risk of p.rk) {
+        if (risk.s === 'out') badges += `<span class="badge badge-out">OUT FOR SEASON</span>`;
+        else if (risk.s === 'high') badges += `<span class="badge badge-injured">INJURED — ${risk.l.split('—')[1]?.trim() || risk.l}</span>`;
+        else if (risk.s === 'med') badges += `<span class="badge badge-minor">MINOR — ${risk.l.split('—')[1]?.trim() || risk.l}</span>`;
+        else if (risk.t === 'trade') badges += `<span class="badge badge-trade">${risk.l}</span>`;
+        else if (risk.t === 'dpp') badges += `<span class="badge badge-dpp-change">${risk.l}</span>`;
+      }
+    }
+
+    // Check if scarce at their position
+    const available = getAvailable();
+    for (const pos of p.positions) {
+      const posAvail = available.filter(pp => playerHasPosition(pp, pos) && pp.a > (state.replacementLevels[pos] || 0));
+      if (posAvail.length <= state.config.numTeams * 0.5) {
+        badges += `<span class="badge badge-scarce">SCARCE ${pos}</span>`;
+        break;
+      }
+    }
+
+    const posTags = p.positions.map(pos =>
+      `<span class="pos-tag pos-tag-${pos}">${pos}</span>`
+    ).join(' ');
+
+    // 3-season trend display
+    let trendHtml = '';
+    if (p.trendData.seasons.length >= 2) {
+      const arrow = p.trendData.trend === 'up' ? '<span class="trend-up">\u2191</span>'
+        : p.trendData.trend === 'down' ? '<span class="trend-down">\u2193</span>'
+        : '<span class="trend-stable">\u2192</span>';
+      const seasonStr = p.trendData.seasons.map(s => s.avg.toFixed(0)).join('\u2192');
+      trendHtml = `<span class="rec-trend">${seasonStr} ${arrow}</span>`;
+    }
+
+    const btnClass = myTurn ? 'rec-draft-btn' : 'rec-draft-btn other';
+    const btnText = myTurn ? 'Draft' : 'Taken';
+    const btnAction = myTurn ? `draftPlayer('${p.n.replace(/'/g, "\\'")}', true)` : `draftPlayer('${p.n.replace(/'/g, "\\'")}', false)`;
+
+    // Hugo draft range — show if it's a steal or a reach
+    let hugoRangeHtml = '';
+    if (p.hdr) {
+      const rangeParts = p.hdr.replace('+', '').split('-').map(Number);
+      const rangeHigh = rangeParts[rangeParts.length - 1] || rangeParts[0];
+      const rangeLow = rangeParts[0];
+      const currentPick = state.currentPick;
+      let rangeClass = 'hugo-range';
+      let rangeLabel = '';
+      if (currentPick > rangeHigh + 10) {
+        rangeClass += ' steal';
+        rangeLabel = 'STEAL ';
+      } else if (currentPick < rangeLow - 15) {
+        rangeClass += ' reach';
+        rangeLabel = 'REACH ';
+      }
+      hugoRangeHtml = `<span class="${rangeClass}">${rangeLabel}Range: ${p.hdr}</span>`;
+    }
+
+    // Hugo concern/opportunity one-liner
+    let hugoNoteHtml = '';
+    if (p.hc && p.ho) {
+      hugoNoteHtml = `<div class="hugo-note"><span class="concern">Risk:</span> ${p.hc} <span class="opportunity">Upside:</span> ${p.ho}</div>`;
+    } else if (p.hc) {
+      hugoNoteHtml = `<div class="hugo-note"><span class="concern">Risk:</span> ${p.hc}</div>`;
+    } else if (p.ho) {
+      hugoNoteHtml = `<div class="hugo-note"><span class="opportunity">Upside:</span> ${p.ho}</div>`;
+    }
+
+    return `
+      <div class="rec-card">
+        <div class="rec-rank">${i + 1}</div>
+        <div class="rec-info">
+          <div class="rec-name">${p.n}</div>
+          <div class="rec-meta">
+            ${posTags}
+            <span>${p.t}</span>
+            <span>${p.g}gm</span>
+            ${trendHtml}
+            ${hugoRangeHtml}
+          </div>
+          <div class="rec-badges">${badges}</div>
+          ${p.fragileSwap ? `<div class="fragile-swap">Durable alt: ${p.fragileSwap}</div>` : ''}
+          ${hugoNoteHtml}
+        </div>
+        <div style="text-align:right; flex-shrink:0;">
+          <div class="rec-avg">${p.a}</div>
+          <div style="font-size:0.75rem; font-weight:700; color:var(--accent);">EV: ${p.adjustedScore.toFixed(1)}</div>
+          <div style="font-size:0.7rem; color:var(--text2); line-height:1.4; opacity:0.6;">
+            ${p.fragilePenalty > 0 ? `<span style="color:var(--red)">fragile -${p.fragilePenalty.toFixed(0)}</span> ` : ''}${p.hugoRiskPenalty > 0 ? `<span style="color:var(--red)">risk -${p.hugoRiskPenalty.toFixed(0)}</span> ` : ''}${p.trendBonus > 0 ? `<span style="color:var(--green)">trend +${p.trendBonus}</span> ` : ''}${p.trendBonus < 0 ? `<span style="color:var(--red)">trend ${p.trendBonus}</span> ` : ''}${p.cliffBonus > 0 ? `<span style="color:var(--yellow)">cliff +${p.cliffBonus.toFixed(0)}</span>` : ''}
+          </div>
+          <div style="font-size:0.65rem; color:var(--text2); opacity:0.5; margin-top:2px;">PSSV: ${p.pssv.toFixed(1)} | VORP: ${p.vorp.toFixed(1)}</div>
+        </div>
+        <button class="${btnClass}" onclick="${btnAction}">${btnText}</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPlayers() {
+  const search = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const filter = state.posFilter;
+
+  let players = PLAYER_DATA;
+
+  if (filter !== 'ALL') {
+    players = players.filter(p => playerHasPosition(p, filter));
+  }
+
+  if (search) {
+    players = players.filter(p => p.n.toLowerCase().includes(search));
+  }
+
+  // Hide already-drafted players so the list always shows available ones
+  players = players.filter(p => !state.draftedNames.has(p.n));
+
+  // Show max 100 players
+  const shown = players.slice(0, 100);
+  const levels = state.replacementLevels;
+
+  const container = document.getElementById('player-list');
+  container.innerHTML = shown.map(p => {
+    const drafted = state.draftedNames.has(p.n);
+    const positions = getPositions(p);
+    const posTags = positions.map(pos =>
+      `<span class="pos-tag pos-tag-${pos}">${pos}</span>`
+    ).join(' ');
+
+    let bestVORP = -Infinity;
+    for (const pos of positions) {
+      const vorp = p.a - (levels[pos] || 0);
+      if (vorp > bestVORP) bestVORP = vorp;
+    }
+    const vorpClass = bestVORP >= 0 ? 'positive' : 'negative';
+
+    const myTurn = isMyPick(state.currentPick);
+    const action = drafted ? '' : (
+      myTurn ?
+        `onclick="draftPlayer('${p.n.replace(/'/g, "\\'")}', true)"` :
+        `onclick="draftPlayer('${p.n.replace(/'/g, "\\'")}', false)"`
+    );
+
+    let riskBadges = '';
+    if (p.rk) {
+      for (const risk of p.rk) {
+        if (risk.s === 'out') riskBadges += `<span class="badge badge-out" style="font-size:0.6rem;">OUT</span>`;
+        else if (risk.s === 'high') riskBadges += `<span class="badge badge-injured" style="font-size:0.6rem;">INJ</span>`;
+        else if (risk.s === 'med') riskBadges += `<span class="badge badge-minor" style="font-size:0.6rem;">INJ</span>`;
+        else if (risk.t === 'trade') riskBadges += `<span class="badge badge-trade" style="font-size:0.6rem;">NEW</span>`;
+        else if (risk.t === 'dpp') riskBadges += `<span class="badge badge-dpp-change" style="font-size:0.6rem;">DPP</span>`;
+      }
+    }
+    return `
+      <div class="player-row ${drafted ? 'drafted' : ''}" ${action}>
+        ${posTags}
+        <span class="pl-name">${p.n}${riskBadges ? ' ' + riskBadges : ''}</span>
+        <span class="pl-team">${p.t}</span>
+        <span class="pl-avg">${p.a}</span>
+        <span class="pl-vorp ${vorpClass}">${bestVORP >= 0 ? '+' : ''}${bestVORP.toFixed(1)}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Position filters
+  const filterContainer = document.getElementById('pos-filters');
+  if (filterContainer.children.length === 0) {
+    const positions = ['ALL', 'DEF', 'MID', 'RUC', 'FWD'];
+    filterContainer.innerHTML = positions.map(pos =>
+      `<button class="pos-filter ${state.posFilter === pos ? 'active' : ''}" onclick="setFilter('${pos}')">${pos}</button>`
+    ).join('');
+  }
+}
+
+function setFilter(pos) {
+  state.posFilter = pos;
+  document.querySelectorAll('.pos-filter').forEach(el => {
+    el.classList.toggle('active', el.textContent === pos);
+  });
+  renderPlayers();
+}
+
+function renderMyTeam() {
+  const needs = getRosterNeeds();
+  const container = document.getElementById('my-team');
+  let html = '';
+
+  for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
+    const players = state.myTeam[pos];
+    const total = state.config.roster[pos] + state.config.bench[pos];
+    const starters = state.config.roster[pos];
+
+    html += `
+      <div class="team-pos-group">
+        <div class="team-pos-header">
+          <span class="team-pos-title ${getPosClass(pos)}">${pos}</span>
+          <span class="team-pos-count">
+            <span class="${players.length >= total ? 'filled' : ''}">${players.length}</span>/${total}
+            (${starters} start, ${state.config.bench[pos]} bench)
+          </span>
+        </div>
+    `;
+
+    if (players.length === 0) {
+      html += '<div class="team-empty">No players drafted yet</div>';
+    } else {
+      players.forEach((p, i) => {
+        const role = i < starters ? 'Starter' : 'Bench';
+        html += `
+          <div class="team-player">
+            <span>${p.n} <span style="color:var(--text2);font-size:0.8rem">${p.t} — ${role}</span></span>
+            <span class="tp-avg">${p.a}</span>
+          </div>
+        `;
+      });
+    }
+
+    html += '</div>';
+  }
+
+  // Team summary
+  const totalAvg = Object.values(state.myTeam).flat().reduce((s, p) => s + p.a, 0);
+  const totalPlayers = getMyTotalPicks();
+  if (totalPlayers > 0) {
+    html += `
+      <div class="team-pos-group" style="text-align:center;">
+        <div style="font-size:0.85rem;color:var(--text2);">Team Average</div>
+        <div style="font-size:1.5rem;font-weight:800;">${(totalAvg / totalPlayers).toFixed(1)}</div>
+        <div style="font-size:0.8rem;color:var(--text2);">${totalPlayers} players drafted</div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderLog() {
+  const container = document.getElementById('draft-log');
+  if (state.picks.length === 0) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2)">No picks yet</div>';
+    return;
+  }
+
+  container.innerHTML = [...state.picks].reverse().map(pick => {
+    const positions = getPositions(pick.player);
+    const posTags = positions.map(pos =>
+      `<span class="pos-tag pos-tag-${pos}" style="font-size:0.7rem;">${pos}</span>`
+    ).join(' ');
+
+    return `
+      <div class="log-entry ${pick.isMyPick ? 'my-pick' : ''}">
+        <span class="log-pick">#${pick.pickNum}</span>
+        ${posTags}
+        <span class="log-name">${pick.player.n}</span>
+        <span style="color:var(--text2);font-size:0.8rem;">${pick.player.t}</span>
+        <span style="font-weight:600;width:40px;text-align:right;">${pick.player.a}</span>
+        <span style="font-size:0.75rem;color:${pick.isMyPick ? 'var(--green)' : 'var(--text2)'}; width:35px; text-align:right;">
+          ${pick.isMyPick ? 'YOU' : 'T' + getPickTeam(pick.pickNum)}
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateTabBadges() {
+  document.getElementById('team-count').textContent = getMyTotalPicks();
+}
+
+function switchTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(tc => {
+    tc.style.display = tc.id === `tab-${tab}` ? 'block' : 'none';
+  });
+  if (tab === 'players') {
+    setTimeout(() => document.getElementById('search-input')?.focus(), 100);
+  }
+  if (tab === 'league') {
+    setTimeout(() => renderLeagueCharts(), 50);
+  }
+}
+
+/* =========================================================
+   STARTUP
+   ========================================================= */
+function startDraft() {
+  const numTeams = parseInt(document.getElementById('cfg-teams').value);
+  const draftPos = parseInt(document.getElementById('cfg-pos').value);
+  const rounds = parseInt(document.getElementById('cfg-rounds').value);
+
+  if (draftPos > numTeams) {
+    alert('Draft position cannot be greater than number of teams!');
+    return;
+  }
+
+  state.config = {
+    numTeams,
+    draftPos,
+    rounds,
+    roster: {
+      DEF: parseInt(document.getElementById('cfg-def').value),
+      MID: parseInt(document.getElementById('cfg-mid').value),
+      RUC: parseInt(document.getElementById('cfg-ruc').value),
+      FWD: parseInt(document.getElementById('cfg-fwd').value),
+    },
+    bench: {
+      DEF: parseInt(document.getElementById('cfg-bdef').value),
+      MID: parseInt(document.getElementById('cfg-bmid').value),
+      RUC: parseInt(document.getElementById('cfg-bruc').value),
+      FWD: parseInt(document.getElementById('cfg-bfwd').value),
+    },
+  };
+
+  // Validate rounds match roster
+  const totalSlots = Object.values(state.config.roster).reduce((s, v) => s + v, 0)
+    + Object.values(state.config.bench).reduce((s, v) => s + v, 0);
+
+  if (state.config.rounds !== totalSlots) {
+    const proceed = confirm(
+      `Rounds (${state.config.rounds}) doesn't match total roster slots (${totalSlots}).\n\n` +
+      `Click OK to auto-set rounds to ${totalSlots}, or Cancel to keep ${state.config.rounds}.`
+    );
+    if (proceed) {
+      state.config.rounds = totalSlots;
+      document.getElementById('cfg-rounds').value = totalSlots;
+    }
+  }
+
+  document.getElementById('config-screen').style.display = 'none';
+  document.getElementById('draft-screen').style.display = 'block';
+
+  // Initial calculations
+  calculateReplacementLevels(PLAYER_DATA);
+  state.qualityThresholds = { ...state.replacementLevels };
+  calculateTiers(PLAYER_DATA);
+  render();
+
+  // Auto-switch to recs or players based on pick
+  if (isMyPick(1)) {
+    switchTab('recs');
+  } else {
+    switchTab('recs');
+  }
+}
+
+// Check player data loaded
+if (typeof PLAYER_DATA === 'undefined' || !PLAYER_DATA.length) {
+  document.body.innerHTML = `
+    <div style="max-width:500px;margin:100px auto;text-align:center;padding:20px;">
+      <h2 style="color:#ff4a6a;">Player Data Not Found</h2>
+      <p style="color:#999;margin-top:12px;">
+        Make sure <code>players_data.js</code> is in the same folder as this HTML file.
+      </p>
+      <p style="color:#999;margin-top:8px;">
+        If opening from your file system doesn't work, run a local server:<br>
+        <code style="background:#1a1a2e;padding:4px 8px;border-radius:4px;">python3 -m http.server 8000</code><br>
+        then open <code>http://localhost:8000/draft_assistant_2026-02-17.html</code>
+      </p>
+    </div>
+  `;
+}
+
+// Keyboard shortcut: Escape to close modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Redraw charts on window resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (state.activeTab === 'league') renderLeagueCharts();
+  }, 200);
+});
+</script>
+</body>
+</html>

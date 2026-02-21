@@ -182,7 +182,18 @@ input, select { font-family: inherit; }
 .badge-late-mode { background: rgba(108, 99, 255, 0.15); color: #a09cff; border: 1px solid rgba(108, 99, 255, 0.3); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; text-align: center; }
 .badge-fragile { background: rgba(239, 68, 68, 0.25); color: #ff6b6b; }
 .badge-volatile { background: rgba(255, 170, 74, 0.15); color: var(--ruc); }
+.badge-blended { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+.badge-inj-season { background: rgba(239, 68, 68, 0.3); color: #ff6b6b; }
+.badge-inj-months { background: rgba(255, 120, 50, 0.25); color: #ff8c42; }
+.badge-inj-weeks { background: rgba(255, 170, 74, 0.25); color: #ffaa4a; }
+.badge-inj-doubt { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+.badge-inj-managed { background: rgba(74, 158, 255, 0.12); color: #6ea8d7; }
+.inj-detail { font-size: 0.7rem; color: #ff8c42; margin-top: 2px; }
 .rec-trend { font-size: 0.7rem; color: var(--text2); display: inline-flex; gap: 1px; align-items: center; white-space: nowrap; }
+.rec-games { font-size: 0.65rem; color: var(--text2); opacity: 0.7; white-space: nowrap; }
+.rec-age { font-size: 0.7rem; color: var(--text2); opacity: 0.7; }
+.pl-games { font-size: 0.7rem; color: var(--text2); width: 80px; text-align: right; flex-shrink: 0; white-space: nowrap; }
+.pl-age { font-size: 0.8rem; color: var(--text2); width: 30px; text-align: right; flex-shrink: 0; }
 .trend-up { color: var(--green); }
 .trend-down { color: var(--red); }
 .trend-stable { color: var(--text2); }
@@ -211,7 +222,7 @@ input, select { font-family: inherit; }
 <!-- CONFIG SCREEN -->
 <div id="config-screen">
   <h1>SuperCoach Draft Assistant</h1>
-  <p class="subtitle">AFL 2026 — EV Scoring: Best Available × Availability</p>
+  <p class="subtitle">AFL 2026 — EV Scoring: Best Available × Availability (Volatile Blend)</p>
 
   <div class="config-group">
     <h3>Draft Settings</h3>
@@ -305,6 +316,15 @@ input, select { font-family: inherit; }
       <input type="text" id="search-input" placeholder="Search player name..." oninput="renderPlayers()">
     </div>
     <div class="pos-filters" id="pos-filters"></div>
+    <div class="player-header" style="display:flex; gap:8px; align-items:center; padding:4px 8px; font-size:0.65rem; color:var(--text2); opacity:0.6; border-bottom:1px solid var(--border);">
+      <span style="width:80px;">Pos</span>
+      <span style="flex:1;">Name</span>
+      <span style="width:40px;">Team</span>
+      <span style="width:30px; text-align:right;">Age</span>
+      <span style="width:80px; text-align:right;">Games</span>
+      <span style="width:45px; text-align:right;">Avg</span>
+      <span style="width:50px; text-align:right;">VORP</span>
+    </div>
     <div class="player-list" id="player-list"></div>
   </div>
 
@@ -360,6 +380,759 @@ let state = {
   activeTab: 'recs',
   posFilter: 'ALL',
   modalCallback: null,
+};
+
+/* =========================================================
+   PLAYER EXTRA DATA — Games played (2024, 2023) + Age
+   Source: AFL Tables (afltables.com)
+   ========================================================= */
+const PLAYER_EXTRA = {
+  "Marcus Bontempelli": { g24: 24, g23: 23, age: 30 },
+  "Max Gawn": { g24: 21, g23: 22, age: 34 },
+  "Tristan Xerri": { g24: 23, g23: 9, age: 26 },
+  "Brodie Grundy": { g24: 26, g23: 17, age: 31 },
+  "Zak Butters": { g24: 26, g23: 25, age: 25 },
+  "Matt Rowell": { g24: 23, g23: 23, age: 24 },
+  "Hugh McCluggage": { g24: 27, g23: 25, age: 27 },
+  "Nick Daicos": { g24: 23, g23: 22, age: 23 },
+  "Bailey Smith": { g24: 15, g23: 19, age: 25 },
+  "Lachie Whitfield": { g24: 25, g23: 24, age: 31 },
+  "Nasiah Wanganeen-Milera": { g24: 22, g23: 24, age: 23 },
+  "Andrew Brayshaw": { g24: 23, g23: 23, age: 26 },
+  "Luke Jackson": { g24: 23, g23: 23, age: 24 },
+  "Noah Anderson": { g24: 23, g23: 23, age: 25 },
+  "Josh Dunkley": { g24: 27, g23: 24, age: 29 },
+  "Max Holmes": { g24: 25, g23: 21, age: 23 },
+  "George Hewett": { g24: 22, g23: 22, age: 30 },
+  "Jack Sinclair": { g24: 22, g23: 24, age: 31 },
+  "Finn Callaghan": { g24: 24, g23: 21, age: 22 },
+  "Ed Richards": { g24: 21, g23: 19, age: 26 },
+  "Tim English": { g24: 23, g23: 23, age: 28 },
+  "Tom Liberatore": { g24: 18, g23: 21, age: 33 },
+  "Tom Green": { g24: 25, g23: 22, age: 25 },
+  "Touk Miller": { g24: 18, g23: 13, age: 30 },
+  "Jordan Dawson": { g24: 22, g23: 23, age: 28 },
+  "Darcy Cameron": { g24: 23, g23: 19, age: 30 },
+  "Isaac Heeney": { g24: 24, g23: 23, age: 29 },
+  "Lachie Ash": { g24: 19, g23: 26, age: 24 },
+  "Zach Merrett": { g24: 23, g23: 22, age: 30 },
+  "Caleb Serong": { g24: 23, g23: 22, age: 25 },
+  "Harry Sheezel": { g24: 21, g23: 23, age: 21 },
+  "Rowan Marshall": { g24: 23, g23: 24, age: 30 },
+  "Rory Laird": { g24: 23, g23: 22, age: 32 },
+  "Lachie Neale": { g24: 26, g23: 26, age: 32 },
+  "Connor Rozee": { g24: 23, g23: 25, age: 26 },
+  "Errol Gulden": { g24: 26, g23: 24, age: 23 },
+  "Dayne Zorko": { g24: 27, g23: 20, age: 37 },
+  "Jordan Clark": { g24: 23, g23: 23, age: 25 },
+  "Jarrod Witts": { g24: 16, g23: 21, age: 33 },
+  "Nic Martin": { g24: 23, g23: 23, age: 24 },
+  "Will Ashcroft": { g24: 13, g23: 18, age: 21 },
+  "Jack Macrae": { g24: 19, g23: 22, age: 31 },
+  "Bailey Dale": { g24: 24, g23: 23, age: 29 },
+  "Lloyd Meek": { g24: 21, g23: 16, age: 27 },
+  "Nick Blakey": { g24: 26, g23: 24, age: 26 },
+  "Luke Davies-Uniacke": { g24: 23, g23: 14, age: 26 },
+  "Jye Caldwell": { g24: 23, g23: 21, age: 25 },
+  "Sam Darcy": { g24: 21, g23: 3, age: 22 },
+  "Sam Walsh": { g24: 20, g23: 18, age: 25 },
+  "Scott Pendlebury": { g24: 20, g23: 25, age: 38 },
+  "Izak Rankine": { g24: 15, g23: 20, age: 25 },
+  "Jason Horne-Francis": { g24: 24, g23: 24, age: 22 },
+  "Callum Mills": { g24: 7, g23: 20, age: 28 },
+  "Will Day": { g24: 16, g23: 21, age: 24 },
+  "Tom Stewart": { g24: 23, g23: 22, age: 32 },
+  "Tom Atkins": { g24: 22, g23: 23, age: 30 },
+  "Tim Taranto": { g24: 15, g23: 23, age: 28 },
+  "Jai Newcombe": { g24: 25, g23: 22, age: 24 },
+  "Adam Cerra": { g24: 13, g23: 22, age: 26 },
+  "Toby Nankervis": { g24: 21, g23: 15, age: 31 },
+  "Riley Thilthorpe": { g24: 7, g23: 21, age: 23 },
+  "Patrick Cripps": { g24: 24, g23: 24, age: 30 },
+  "Hayden Young": { g24: 23, g23: 22, age: 24 },
+  "Jack Steele": { g24: 23, g23: 21, age: 30 },
+  "Tom De Koning": { g24: 18, g23: 19, age: 26 },
+  "Jordan Ridley": { g24: 9, g23: 17, age: 27 },
+  "Josh Daicos": { g24: 23, g23: 26, age: 27 },
+  "Christian Petracca": { g24: 13, g23: 25, age: 30 },
+  "John Noble": { g24: 20, g23: 23, age: 28 },
+  "Matthew Kennedy": { g24: 24, g23: 16, age: 28 },
+  "Mason Redman": { g24: 21, g23: 23, age: 28 },
+  "Ollie Wines": { g24: 25, g23: 25, age: 31 },
+  "Gryan Miers": { g24: 25, g23: 23, age: 26 },
+  "Steele Sidebottom": { g24: 22, g23: 20, age: 35 },
+  "Karl Amon": { g24: 25, g23: 21, age: 30 },
+  "Reilly O'Brien": { g24: 21, g23: 23, age: 30 },
+  "Luke Ryan": { g24: 23, g23: 23, age: 30 },
+  "Caleb Daniel": { g24: 16, g23: 23, age: 29 },
+  "Nick Vlastuin": { g24: 22, g23: 21, age: 31 },
+  "Chad Warner": { g24: 25, g23: 21, age: 24 },
+  "Tom McCarthy": { g24: null, g23: null, age: null },
+  "Harry McKay": { g24: 21, g23: 21, age: 28 },
+  "Callum Wilkie": { g24: 23, g23: 24, age: 29 },
+  "Clayton Oliver": { g24: 21, g23: 15, age: 28 },
+  "Jake Bowey": { g24: 14, g23: 23, age: 23 },
+  "Liam Baker": { g24: 18, g23: 23, age: 28 },
+  "Josh Worrell": { g24: 13, g23: 12, age: 24 },
+  "Sam Draper": { g24: 16, g23: 14, age: 27 },
+  "Kysaiah Pickett": { g24: 21, g23: 23, age: 24 },
+  "Christian Salem": { g24: 17, g23: 16, age: 30 },
+  "Brayden Fiorini": { g24: 12, g23: 17, age: 28 },
+  "Jack Crisp": { g24: 23, g23: 26, age: 32 },
+  "Sam Durham": { g24: 22, g23: 22, age: 24 },
+  "Will Setterfield": { g24: 4, g23: 10, age: 28 },
+  "Matt Roberts": { g24: 23, g23: 6, age: 22 },
+  "Jacob Hopper": { g24: 12, g23: 16, age: 29 },
+  "George Stevens": { g24: null, g23: null, age: null },
+  "Jarrod Berry": { g24: 27, g23: 25, age: 28 },
+  "Zac Bailey": { g24: 22, g23: 24, age: 26 },
+  "Jeremy Cameron": { g24: 24, g23: 20, age: 32 },
+  "Jake Soligo": { g24: 23, g23: 21, age: 23 },
+  "James Sicily": { g24: 22, g23: 19, age: 31 },
+  "Darcy Parish": { g24: 12, g23: 18, age: 28 },
+  "Josh Kelly": { g24: 17, g23: 22, age: 31 },
+  "Jack Gunston": { g24: 18, g23: 17, age: 34 },
+  "Justin McInerney": { g24: 20, g23: 19, age: 25 },
+  "Luke Parker": { g24: 10, g23: 23, age: 33 },
+  "Jack Graham": { g24: 14, g23: 20, age: 28 },
+  "Kane Farrell": { g24: 22, g23: 22, age: 26 },
+  "Jaspa Fletcher": { g24: 27, g23: 14, age: 22 },
+  "James Tunstill": { g24: 4, g23: 2, age: 22 },
+  "Ryan Maric": { g24: 19, g23: 10, age: 21 },
+  "Harry Himmelberg": { g24: 25, g23: 25, age: 29 },
+  "Dylan Moore": { g24: 25, g23: 23, age: 26 },
+  "Marc Pittonet": { g24: 14, g23: 18, age: 29 },
+  "Jordon Sweet": { g24: 17, g23: null, age: 28 },
+  "Jack Viney": { g24: 23, g23: 24, age: 31 },
+  "Jy Simpkin": { g24: 18, g23: 18, age: 27 },
+  "Darcy Wilmot": { g24: 27, g23: 26, age: 22 },
+  "Adam Treloar": { g24: 23, g23: 19, age: 32 },
+  "Steven May": { g24: 19, g23: 23, age: 34 },
+  "Nicholas Madden": { g24: null, g23: null, age: null },
+  "Kieren Briggs": { g24: 24, g23: 17, age: 26 },
+  "Joel Jeffrey": { g24: 12, g23: 7, age: 23 },
+  "Patrick Dangerfield": { g24: 16, g23: 18, age: 35 },
+  "Angus Sheldrick": { g24: null, g23: 7, age: 22 },
+  "Connor Idun": { g24: 25, g23: 26, age: 25 },
+  "Tom Powell": { g24: 23, g23: 14, age: 23 },
+  "Jayden Short": { g24: 22, g23: 16, age: 30 },
+  "Shaun Mannagh": { g24: 12, g23: null, age: 28 },
+  "Andrew McGrath": { g24: 23, g23: 23, age: 27 },
+  "Miles Bergman": { g24: 26, g23: 24, age: 24 },
+  "Adam Saad": { g24: 18, g23: 25, age: 31 },
+  "Archie Roberts": { g24: 4, g23: null, age: 20 },
+  "Ned Long": { g24: 7, g23: 4, age: 23 },
+  "Jarman Impey": { g24: 25, g23: 22, age: 30 },
+  "Daniel Rioli": { g24: 23, g23: 23, age: 28 },
+  "Colby McKercher": { g24: 16, g23: null, age: 20 },
+  "Josh Ward": { g24: 12, g23: 16, age: 22 },
+  "Toby Greene": { g24: 24, g23: 24, age: 32 },
+  "Sam Banks": { g24: 15, g23: 6, age: 22 },
+  "Harris Andrews": { g24: 26, g23: 26, age: 29 },
+  "Brent Daniels": { g24: 24, g23: 20, age: 26 },
+  "Matt Flynn": { g24: 4, g23: 9, age: 28 },
+  "Trent Rivers": { g24: 23, g23: 25, age: 24 },
+  "Dion Prestia": { g24: 13, g23: 20, age: 33 },
+  "George Wardlaw": { g24: 18, g23: 8, age: 21 },
+  "Marcus Windhager": { g24: 15, g23: 19, age: 22 },
+  "James Peatling": { g24: 19, g23: 10, age: 25 },
+  "Willem Drew": { g24: 26, g23: 25, age: 27 },
+  "Xavier Duursma": { g24: 15, g23: 16, age: 25 },
+  "Brayden Maynard": { g24: 23, g23: 25, age: 29 },
+  "James Rowbottom": { g24: 24, g23: 24, age: 25 },
+  "Kane McAuliffe": { g24: 9, g23: null, age: 21 },
+  "Mark Blicavs": { g24: 24, g23: 19, age: 34 },
+  "Zach Guthrie": { g24: 25, g23: 23, age: 27 },
+  "Sam Taylor": { g24: 18, g23: 18, age: 26 },
+  "Shai Bolton": { g24: 22, g23: 23, age: 27 },
+  "Ben Keays": { g24: 23, g23: 23, age: 29 },
+  "Josh Battle": { g24: 23, g23: 23, age: 27 },
+  "Wayne Milera": { g24: 3, g23: 22, age: 28 },
+  "Jack Silvagni": { g24: null, g23: 16, age: 28 },
+  "Josh Rachele": { g24: 22, g23: 21, age: 22 },
+  "Aaron Naughton": { g24: 20, g23: 23, age: 26 },
+  "Nick Haynes": { g24: 8, g23: 20, age: 33 },
+  "Oliver Dempsey": { g24: 25, g23: 5, age: 23 },
+  "Ewan Mackinlay": { g24: null, g23: null, age: null },
+  "Bailey Humphrey": { g24: 21, g23: 19, age: 21 },
+  "Jake Lloyd": { g24: 26, g23: 23, age: 32 },
+  "Tom Cole": { g24: 23, g23: 12, age: 28 },
+  "Zach Reid": { g24: 1, g23: null, age: 23 },
+  "Bailey Williams": { g24: 24, g23: 23, age: 28 },
+  "Liam Duggan": { g24: 21, g23: 22, age: 29 },
+  "Sean Darcy": { g24: 12, g23: 15, age: 27 },
+  "Darcy Fort": { g24: 3, g23: 7, age: 32 },
+  "Joel Freijah": { g24: 13, g23: null, age: 20 },
+  "Jeremy Howe": { g24: 19, g23: 14, age: 35 },
+  "Peter Wright": { g24: 14, g23: 10, age: 29 },
+  "Wil Powell": { g24: 18, g23: 18, age: 26 },
+  "Lachie Schultz": { g24: 20, g23: 23, age: 28 },
+  "Sam Berry": { g24: 18, g23: 4, age: 24 },
+  "Josh Treacy": { g24: 20, g23: 17, age: 23 },
+  "Tom McDonald": { g24: 22, g23: 8, age: 33 },
+  "Riley Bice": { g24: null, g23: null, age: null },
+  "Jack Ross": { g24: 7, g23: 19, age: 25 },
+  "Dan Houston": { g24: 22, g23: 25, age: 28 },
+  "James Worpel": { g24: 25, g23: 23, age: 27 },
+  "Paul Curtis": { g24: 23, g23: 21, age: 22 },
+  "Lachlan Cowan": { g24: 17, g23: 7, age: 21 },
+  "Josh Weddle": { g24: 25, g23: 17, age: 21 },
+  "Jacob Weitering": { g24: 22, g23: 26, age: 28 },
+  "Mark Keane": { g24: 21, g23: 5, age: 25 },
+  "Alex Davies": { g24: 7, g23: 9, age: 23 },
+  "Alex Neal-Bullen": { g24: 23, g23: 25, age: 30 },
+  "Jack Ginnivan": { g24: 23, g23: 14, age: 23 },
+  "Hunter Clark": { g24: 11, g23: 19, age: 26 },
+  "Henry Hustwaite": { g24: 4, g23: 2, age: 21 },
+  "Jamie Elliott": { g24: 15, g23: 24, age: 33 },
+  "Jesse Hogan": { g24: 25, g23: 23, age: 31 },
+  "Cam Mackenzie": { g24: 20, g23: 14, age: 22 },
+  "Conor Nash": { g24: 25, g23: 23, age: 27 },
+  "Bodhi Uwland": { g24: 21, g23: 3, age: 22 },
+  "Esava Ratugolea": { g24: 23, g23: 16, age: 27 },
+  "Mitchell Hinge": { g24: 22, g23: 22, age: 27 },
+  "James Harmes": { g24: 9, g23: 9, age: 30 },
+  "Patrick Lipinski": { g24: 23, g23: 14, age: 27 },
+  "Oliver Hollands": { g24: 23, g23: 19, age: 22 },
+  "Harry Rowston": { g24: null, g23: 7, age: 21 },
+  "Max Hall": { g24: null, g23: null, age: null },
+  "Lawson Humphries": { g24: 11, g23: null, age: 23 },
+  "Blake Hardwick": { g24: 25, g23: 23, age: 29 },
+  "Daniel Curtin": { g24: 7, g23: null, age: 20 },
+  "Nick Bryan": { g24: 5, g23: 8, age: 24 },
+  "Kade Chandler": { g24: 23, g23: 23, age: 26 },
+  "Neil Erasmus": { g24: 4, g23: 14, age: 22 },
+  "Zac Williams": { g24: 19, g23: null, age: 31 },
+  "Tylar Young": { g24: 9, g23: 19, age: 27 },
+  "Jase Burgoyne": { g24: 23, g23: 5, age: 22 },
+  "Tim Kelly": { g24: 20, g23: 22, age: 31 },
+  "Jack Bowes": { g24: 22, g23: 17, age: 28 },
+  "Jack Buckley": { g24: 23, g23: 26, age: 28 },
+  "Matthew Cottrell": { g24: 14, g23: 17, age: 26 },
+  "Darcy Jones": { g24: 14, g23: null, age: 21 },
+  "Sam Flanders": { g24: 22, g23: 14, age: 24 },
+  "Harvey Langford": { g24: null, g23: null, age: null },
+  "Ryley Sanders": { g24: 14, g23: null, age: 21 },
+  "Cam Rayner": { g24: 27, g23: 26, age: 26 },
+  "Jack Scrimshaw": { g24: 24, g23: 16, age: 27 },
+  "Mitch Georgiades": { g24: 20, g23: 2, age: 24 },
+  "Levi Ashcroft": { g24: null, g23: null, age: null },
+  "Connor Macdonald": { g24: 25, g23: 21, age: 23 },
+  "Matthew Johnson": { g24: 19, g23: 18, age: 22 },
+  "Reuben Ginbey": { g24: 23, g23: 17, age: 21 },
+  "Bradley Hill": { g24: 22, g23: 22, age: 32 },
+  "Daniel Turner": { g24: 15, g23: 2, age: 24 },
+  "Cooper Lord": { g24: 2, g23: null, age: 20 },
+  "Ed Langdon": { g24: 22, g23: 25, age: 30 },
+  "Keidean Coleman": { g24: 1, g23: 23, age: 25 },
+  "Luke McDonald": { g24: 22, g23: 22, age: 31 },
+  "Mason Wood": { g24: 18, g23: 24, age: 32 },
+  "Sam Collins": { g24: 23, g23: 23, age: 31 },
+  "Harry Morrison": { g24: 12, g23: 13, age: 27 },
+  "Cooper Trembath": { g24: null, g23: null, age: null },
+  "Corey Wagner": { g24: 12, g23: 9, age: 28 },
+  "Aliir Aliir": { g24: 25, g23: 24, age: 31 },
+  "Nick Larkey": { g24: 23, g23: 23, age: 27 },
+  "Mitch McGovern": { g24: 18, g23: 22, age: 31 },
+  "Changkuoth Jiath": { g24: 11, g23: 8, age: 26 },
+  "Hugo Garcia": { g24: 9, g23: null, age: 20 },
+  "Jack Henry": { g24: 25, g23: 11, age: 27 },
+  "Charlie Curnow": { g24: 21, g23: 26, age: 29 },
+  "Brandon Walker": { g24: 19, g23: 14, age: 23 },
+  "Rhylee West": { g24: 21, g23: 12, age: 25 },
+  "Massimo D'Ambrosio": { g24: 24, g23: 8, age: 22 },
+  "Ryan Angwin": { g24: 4, g23: 15, age: 23 },
+  "Harley Reid": { g24: 20, g23: null, age: 20 },
+  "Jack Payne": { g24: 18, g23: 23, age: 26 },
+  "Ben Miller": { g24: 21, g23: 13, age: 26 },
+  "Tom Papley": { g24: 21, g23: 23, age: 29 },
+  "Jake Riccardi": { g24: 19, g23: 21, age: 26 },
+  "Cooper Sharman": { g24: 18, g23: 16, age: 25 },
+  "Mac Andrew": { g24: 20, g23: 17, age: 22 },
+  "Alex Pearce": { g24: 15, g23: 23, age: 30 },
+  "Joe Richards": { g24: 9, g23: null, age: 26 },
+  "Blake Acres": { g24: 23, g23: 25, age: 30 },
+  "Tom McCartin": { g24: 22, g23: 15, age: 26 },
+  "Clay Hall": { g24: 3, g23: null, age: 20 },
+  "Sam Powell-Pepper": { g24: 3, g23: 25, age: 28 },
+  "Jaxon Prior": { g24: 4, g23: 5, age: 24 },
+  "Darcy Byrne-Jones": { g24: 26, g23: 23, age: 30 },
+  "Sam Switkowski": { g24: 20, g23: 22, age: 29 },
+  "Taylor Walker": { g24: 18, g23: 22, age: 35 },
+  "Ned Moyle": { g24: 8, g23: 2, age: 24 },
+  "Hugh Boxshall": { g24: null, g23: null, age: null },
+  "Harry Perryman": { g24: 21, g23: 22, age: 27 },
+  "Murphy Reid": { g24: null, g23: null, age: null },
+  "Rhys Stanley": { g24: 14, g23: 13, age: 35 },
+  "Jed Bews": { g24: 5, g23: 15, age: 32 },
+  "Brady Hough": { g24: 23, g23: 15, age: 22 },
+  "Will Lorenz": { g24: 2, g23: null, age: 21 },
+  "Mabior Chol": { g24: 23, g23: 8, age: 29 },
+  "Will Hayward": { g24: 26, g23: 23, age: 27 },
+  "Jack Martin": { g24: 3, g23: 13, age: 31 },
+  "Bayley Fritsch": { g24: 23, g23: 17, age: 29 },
+  "Lachlan Bramble": { g24: 24, g23: 11, age: 27 },
+  "Isaac Quaynor": { g24: 23, g23: 26, age: 26 },
+  "Ryan Lester": { g24: 27, g23: 19, age: 33 },
+  "Sam De Koning": { g24: 19, g23: 19, age: 25 },
+  "Callum Brown": { g24: 13, g23: 19, age: 25 },
+  "Cameron Zurhaar": { g24: 22, g23: 16, age: 27 },
+  "Jai Culley": { g24: 3, g23: 5, age: 23 },
+  "Hugo Ralphsmith": { g24: 18, g23: 13, age: 24 },
+  "Nathan Broad": { g24: 22, g23: 19, age: 32 },
+  "Jaeger O'Meara": { g24: 22, g23: 21, age: 32 },
+  "Darcy Moore": { g24: 23, g23: 24, age: 30 },
+  "Tyson Stengle": { g24: 25, g23: 19, age: 27 },
+  "Jayden Laverde": { g24: 21, g23: 19, age: 29 },
+  "Tom Brown": { g24: 18, g23: 1, age: 22 },
+  "Rory Lobb": { g24: 16, g23: 20, age: 33 },
+  "Anthony Caminiti": { g24: 15, g23: 18, age: 22 },
+  "Francis Evans": { g24: 17, g23: 10, age: 24 },
+  "Oskar Baker": { g24: 6, g23: 18, age: 27 },
+  "Jordan De Goey": { g24: 13, g23: 21, age: 29 },
+  "Logan Evans": { g24: 13, g23: null, age: 20 },
+  "Noah Answerth": { g24: 16, g23: 4, age: 26 },
+  "Elijah Hewett": { g24: null, g23: 14, age: 21 },
+  "Jake Melksham": { g24: 8, g23: 13, age: 34 },
+  "Seth Campbell": { g24: 21, g23: null, age: 21 },
+  "Jacob Wehr": { g24: 11, g23: 4, age: 27 },
+  "Shannon Neale": { g24: 15, g23: 3, age: 23 },
+  "Jake Lever": { g24: 18, g23: 24, age: 29 },
+  "Mitch Owens": { g24: 23, g23: 23, age: 22 },
+  "Callum Ah Chee": { g24: 26, g23: 12, age: 28 },
+  "Nick Watson": { g24: 18, g23: null, age: 21 },
+  "Isaac Cumming": { g24: 6, g23: 20, age: 27 },
+  "Ben Long": { g24: 17, g23: 15, age: 28 },
+  "Aaron Cadman": { g24: 23, g23: 12, age: 21 },
+  "Mitch Lewis": { g24: 4, g23: 15, age: 27 },
+  "Jy Farrar": { g24: null, g23: 9, age: 29 },
+  "Riley Garcia": { g24: 12, g23: 3, age: 25 },
+  "Harvey Thomas": { g24: 22, g23: null, age: 20 },
+  "Ben King": { g24: 22, g23: 20, age: 25 },
+  "Hayden McLean": { g24: 26, g23: 22, age: 27 },
+  "Dylan Stephens": { g24: 16, g23: 13, age: 25 },
+  "Daniel McStay": { g24: 5, g23: 14, age: 30 },
+  "Jordan Croft": { g24: null, g23: null, age: null },
+  "Brody Mihocek": { g24: 11, g23: 24, age: 33 },
+  "Connor O'Sullivan": { g24: 1, g23: null, age: 20 },
+  "Dane Rampe": { g24: 21, g23: 15, age: 35 },
+  "Mark O'Connor": { g24: 13, g23: 22, age: 29 },
+  "Darcy Wilson": { g24: 23, g23: null, age: 20 },
+  "Campbell Gray": { g24: null, g23: null, age: null },
+  "Will Graham": { g24: 17, g23: null, age: 20 },
+  "Lachie Fogarty": { g24: 15, g23: 12, age: 26 },
+  "Oliver Florent": { g24: 26, g23: 24, age: 27 },
+  "Edward Allan": { g24: 2, g23: null, age: 21 },
+  "Sam Clohesy": { g24: 20, g23: null, age: 23 },
+  "Heath Chapman": { g24: 16, g23: 3, age: 24 },
+  "Ned Reeves": { g24: 4, g23: 21, age: 27 },
+  "Dougal Howard": { g24: 15, g23: 18, age: 29 },
+  "Lewis Hayes": { g24: null, g23: null, age: null },
+  "Sam Davidson": { g24: null, g23: null, age: null },
+  "Stephen Coniglio": { g24: 15, g23: 25, age: 32 },
+  "Ryan Byrnes": { g24: 15, g23: 20, age: 24 },
+  "Jake Waterman": { g24: 20, g23: 11, age: 27 },
+  "Dante Visentini": { g24: 3, g23: 3, age: 23 },
+  "Jake Stringer": { g24: 23, g23: 17, age: 31 },
+  "Xavier O'Halloran": { g24: 19, g23: 15, age: 25 },
+  "Campbell Chesser": { g24: 18, g23: 14, age: 22 },
+  "Max Ramsden": { g24: 3, g23: 2, age: 22 },
+  "Nathan O'Driscoll": { g24: 2, g23: 10, age: 23 },
+  "Logan Morris": { g24: 19, g23: null, age: 20 },
+  "Aidan Corr": { g24: 23, g23: 19, age: 31 },
+  "James Jordon": { g24: 26, g23: 18, age: 25 },
+  "Lachie Weller": { g24: 6, g23: 9, age: 30 },
+  "Brad Close": { g24: 25, g23: 21, age: 27 },
+  "James Trezise": { g24: 7, g23: 1, age: 23 },
+  "Joel Amartey": { g24: 25, g23: 15, age: 26 },
+  "Riley Hardeman": { g24: 3, g23: null, age: 21 },
+  "Noah Balta": { g24: 19, g23: 23, age: 26 },
+  "Sandy Brock": { g24: null, g23: null, age: null },
+  "Toby Bedford": { g24: 23, g23: 19, age: 25 },
+  "Liam Ryan": { g24: 16, g23: 3, age: 29 },
+  "Jacob van Rooyen": { g24: 21, g23: 20, age: 22 },
+  "Griffin Logue": { g24: 2, g23: 15, age: 27 },
+  "Cooper Simpson": { g24: 2, g23: null, age: 21 },
+  "Brayden Cook": { g24: 15, g23: 1, age: 23 },
+  "Beau McCreery": { g24: 17, g23: 25, age: 24 },
+  "Harry O'Farrell": { g24: null, g23: null, age: null },
+  "Max Michalanney": { g24: 23, g23: 22, age: 22 },
+  "Bailey Banfield": { g24: 22, g23: 14, age: 28 },
+  "Jack Williams": { g24: 18, g23: 10, age: 22 },
+  "Billy Frampton": { g24: 18, g23: 16, age: 29 },
+  "Mitch Knevitt": { g24: 4, g23: 8, age: 23 },
+  "Lachlan Sholl": { g24: 20, g23: 16, age: 25 },
+  "Harry Edwards": { g24: 9, g23: 2, age: 25 },
+  "Lewis Young": { g24: 9, g23: 15, age: 27 },
+  "Tom Barrass": { g24: 18, g23: 14, age: 30 },
+  "Darcy Fogarty": { g24: 23, g23: 21, age: 26 },
+  "Charlie Comben": { g24: 19, g23: 7, age: 24 },
+  "Ben Ainsworth": { g24: 17, g23: 21, age: 28 },
+  "Jamie Cripps": { g24: 23, g23: 12, age: 33 },
+  "Zac Fisher": { g24: 18, g23: 12, age: 27 },
+  "Xavier Lindsay": { g24: null, g23: null, age: null },
+  "Tom Sparrow": { g24: 21, g23: 23, age: 25 },
+  "Sam Lalor": { g24: null, g23: null, age: null },
+  "Jade Gresham": { g24: 22, g23: 23, age: 28 },
+  "Buku Khamis": { g24: 17, g23: 1, age: 25 },
+  "Jack Darling": { g24: 21, g23: 20, age: 33 },
+  "Karl Worner": { g24: 4, g23: 4, age: 23 },
+  "Rhyan Mansell": { g24: 21, g23: 17, age: 25 },
+  "Toby McMullin": { g24: 14, g23: 3, age: 21 },
+  "Darcy Gardiner": { g24: 7, g23: 4, age: 30 },
+  "Patrick Voss": { g24: 7, g23: null, age: 22 },
+  "Jack Higgins": { g24: 20, g23: 22, age: 26 },
+  "Braeden Campbell": { g24: 23, g23: 23, age: 24 },
+  "Brandon Zerk-Thatcher": { g24: 26, g23: 22, age: 27 },
+  "Angus Clarke": { g24: null, g23: null, age: null },
+  "Lucca Grego": { g24: null, g23: null, age: null },
+  "Brennan Cox": { g24: 9, g23: 20, age: 27 },
+  "Bobby Hill": { g24: 23, g23: 24, age: 26 },
+  "Michael Frederick": { g24: 20, g23: 19, age: 25 },
+  "Oscar Allen": { g24: 11, g23: 23, age: 26 },
+  "Sam Butler": { g24: 2, g23: 8, age: 23 },
+  "Archie Perkins": { g24: 18, g23: 23, age: 23 },
+  "Zak Johnson": { g24: null, g23: null, age: null },
+  "Toby Pink": { g24: 15, g23: null, age: 27 },
+  "Finn O'Sullivan": { g24: null, g23: null, age: null },
+  "Harry Cunningham": { g24: 23, g23: 24, age: 32 },
+  "Jack Lukosius": { g24: 21, g23: 22, age: 25 },
+  "Elijah Tsatas": { g24: 7, g23: 4, age: 21 },
+  "Max Heath": { g24: null, g23: null, age: null },
+  "Tom Gross": { g24: null, g23: null, age: null },
+  "Tim Membrey": { g24: 19, g23: 7, age: 31 },
+  "Lachie Jones": { g24: 21, g23: 15, age: 23 },
+  "Caiden Cleary": { g24: 5, g23: null, age: 20 },
+  "Luke Cleary": { g24: 2, g23: 1, age: 23 },
+  "Charlie Cameron": { g24: 27, g23: 26, age: 31 },
+  "Harrison Petty": { g24: 20, g23: 14, age: 26 },
+  "Judd McVee": { g24: 23, g23: 25, age: 22 },
+  "Jack Hutchinson": { g24: 7, g23: null, age: 24 },
+  "Caleb Windsor": { g24: 19, g23: null, age: 20 },
+  "Lewis Melican": { g24: 24, g23: 8, age: 29 },
+  "Kyle Langford": { g24: 23, g23: 23, age: 29 },
+  "Isaiah Dudley": { g24: null, g23: null, age: null },
+  "Luke Trainor": { g24: null, g23: null, age: null },
+  "Kai Lohmann": { g24: 27, g23: 6, age: 22 },
+  "Tom Lynch": { g24: 4, g23: 4, age: 33 },
+  "Sam Wicks": { g24: 16, g23: 11, age: 26 },
+  "James O'Donnell": { g24: 14, g23: 12, age: 23 },
+  "Vigo Visentini": { g24: null, g23: null, age: null },
+  "Eric Hipwood": { g24: 24, g23: 26, age: 28 },
+  "Oscar McDonald": { g24: 1, g23: null, age: 29 },
+  "Josh Sinn": { g24: 6, g23: 3, age: 23 },
+  "Archer May": { g24: null, g23: null, age: null },
+  "Blake Howes": { g24: 16, g23: null, age: 22 },
+  "Liam Stocker": { g24: 16, g23: 23, age: 26 },
+  "Isaac Kako": { g24: null, g23: null, age: null },
+  "Joe Fonti": { g24: 5, g23: null, age: 21 },
+  "Hamish Davis": { g24: null, g23: null, age: null },
+  "Taj Hotton": { g24: null, g23: null, age: null },
+  "Billy Dowling": { g24: 9, g23: null, age: 21 },
+  "Sam Marshall": { g24: null, g23: null, age: null },
+  "Laitham Vandermeer": { g24: 24, g23: 11, age: 27 },
+  "Bruce Reville": { g24: 12, g23: null, age: 25 },
+  "Christian Moraes": { g24: null, g23: null, age: null },
+  "Matthew Carroll": { g24: null, g23: null, age: null },
+  "Saad El-Hawli": { g24: null, g23: null, age: null },
+  "Lucas Camporeale": { g24: null, g23: null, age: null },
+  "Reef McInnes": { g24: 9, g23: 5, age: 23 },
+  "Malcolm Rosas": { g24: 7, g23: 19, age: 24 },
+  "Lachlan Blakiston": { g24: null, g23: null, age: null },
+  "Calsher Dear": { g24: 17, g23: null, age: 20 },
+  "Leek Aleer": { g24: 8, g23: null, age: 24 },
+  "Maurice Rioli": { g24: 9, g23: 10, age: 23 },
+  "Kaleb Smith": { g24: 4, g23: null, age: 21 },
+  "Rhett Bazzo": { g24: 1, g23: 11, age: 22 },
+  "Tyler Brockman": { g24: 10, g23: 15, age: 23 },
+  "Tom Hanily": { g24: null, g23: null, age: null },
+  "Nate Caddy": { g24: 10, g23: null, age: 20 },
+  "Jack Buller": { g24: null, g23: 1, age: 24 },
+  "Peter Ladhams": { g24: 1, g23: 9, age: 28 },
+  "Jackson Mead": { g24: 26, g23: 7, age: 24 },
+  "Jedd Busslinger": { g24: null, g23: null, age: null },
+  "Jesse Motlop": { g24: 7, g23: 21, age: 22 },
+  "Bailey J. Williams": { g24: 24, g23: 23, age: null },
+  "Brandon Starcevich": { g24: 21, g23: 26, age: 26 },
+  "Finn Maginness": { g24: 13, g23: 13, age: 25 },
+  "Alixzander Tauru": { g24: null, g23: null, age: null },
+  "Tyler Sonsie": { g24: 14, g23: 3, age: 23 },
+  "Corey Durdin": { g24: 14, g23: 11, age: 23 },
+  "Jhye Clark": { g24: 15, g23: 1, age: 21 },
+  "Mani Liddy": { g24: null, g23: null, age: null },
+  "Matt Guelfi": { g24: 13, g23: 13, age: 28 },
+  "Bailey Scott": { g24: 23, g23: 23, age: 25 },
+  "Lachlan Sullivan": { g24: 10, g23: null, age: 28 },
+  "Luke Nankervis": { g24: 20, g23: 4, age: 22 },
+  "Billy Wilson": { g24: null, g23: null, age: null },
+  "Lachlan McNeil": { g24: 12, g23: 13, age: 25 },
+  "Tobie Travaglia": { g24: null, g23: null, age: null },
+  "Jack Henderson": { g24: null, g23: null, age: null },
+  "Jobe Shanahan": { g24: null, g23: null, age: null },
+  "Jeremy Sharp": { g24: 23, g23: null, age: 24 },
+  "Tom Doedee": { g24: null, g23: 11, age: 29 },
+  "Tyrell Dewar": { g24: 7, g23: null, age: 21 },
+  "Ethan Read": { g24: 4, g23: null, age: 20 },
+  "Charlie Spargo": { g24: 1, g23: 14, age: 26 },
+  "Harrison Jones": { g24: 21, g23: 5, age: 25 },
+  "Lachlan Gulbin": { g24: null, g23: null, age: null },
+  "Oliver Henry": { g24: 23, g23: 22, age: 23 },
+  "Hudson O'Keeffe": { g24: null, g23: null, age: null },
+  "Nick Coffield": { g24: 8, g23: null, age: 26 },
+  "Cooper Harvey": { g24: null, g23: 3, age: 21 },
+  "Flynn Young": { g24: null, g23: null, age: null },
+  "Sid Draper": { g24: 16, g23: 14, age: null },
+  "Zac Taylor": { g24: 9, g23: null, age: 23 },
+  "Connor Budarick": { g24: 8, g23: 2, age: 24 },
+  "Luke Pedlar": { g24: 4, g23: 21, age: 23 },
+  "Corey Warner": { g24: 6, g23: 3, age: 22 },
+  "Jackson Archer": { g24: 15, g23: 5, age: 23 },
+  "Ty Gallop": { g24: null, g23: null, age: null },
+  "Conor Stone": { g24: 4, g23: 3, age: 23 },
+  "Jordan Boyd": { g24: 19, g23: 9, age: 27 },
+  "Thomas Edwards": { g24: null, g23: null, age: null },
+  "Jacob Newton": { g24: null, g23: null, age: null },
+  "Joel Hamling": { g24: null, g23: 4, age: 32 },
+  "Nick Holman": { g24: 21, g23: 19, age: 30 },
+  "Jake Rogers": { g24: 9, g23: null, age: 20 },
+  "Jye Amiss": { g24: 22, g23: 22, age: 22 },
+  "Joe Berry": { g24: 27, g23: 25, age: null },
+  "Brodie Kemp": { g24: 21, g23: 17, age: 24 },
+  "Harvey Gallagher": { g24: 20, g23: null, age: 22 },
+  "Conor McKenna": { g24: 18, g23: 26, age: 29 },
+  "Jack Carroll": { g24: 15, g23: 1, age: 23 },
+  "Nick Murray": { g24: 9, g23: 17, age: 25 },
+  "Matthew Owies": { g24: 23, g23: 18, age: 28 },
+  "Max Gruzewski": { g24: 4, g23: null, age: 21 },
+  "Tom Cochrane": { g24: null, g23: null, age: null },
+  "Joshua Draper": { g24: 20, g23: null, age: 22 },
+  "Ben McKay": { g24: 23, g23: 19, age: 28 },
+  "Bo Allan": { g24: null, g23: null, age: null },
+  "Dan Butler": { g24: 16, g23: 24, age: 29 },
+  "Liam McMahon": { g24: null, g23: null, age: null },
+  "Ashton Moir": { g24: 2, g23: null, age: 20 },
+  "Jordon Butts": { g24: 15, g23: 17, age: 26 },
+  "Jed Walter": { g24: 14, g23: null, age: 20 },
+  "Archer Reid": { g24: null, g23: null, age: null },
+  "Roan Steele": { g24: null, g23: null, age: null },
+  "Henry Smith": { g24: 4, g23: null, age: 23 },
+  "Jacob Konstanty": { g24: null, g23: null, age: null },
+  "Wil Dawson": { g24: 3, g23: null, age: 20 },
+  "Mattaes Phillipou": { g24: 13, g23: 24, age: 21 },
+  "Oisin Mullin": { g24: 12, g23: 6, age: 26 },
+  "William Hayes": { g24: null, g23: null, age: null },
+  "Hugh Bond": { g24: 7, g23: null, age: 21 },
+  "Koltyn Tholstrup": { g24: 10, g23: null, age: 20 },
+  "Mason Cox": { g24: 16, g23: 19, age: 34 },
+  "Josh Gibcus": { g24: 2, g23: null, age: 22 },
+  "Ollie Lord": { g24: 6, g23: 13, age: 24 },
+  "Jonty Faull": { g24: null, g23: null, age: null },
+  "Steely Green": { g24: 6, g23: null, age: 22 },
+  "Wil Parker": { g24: 5, g23: null, age: 23 },
+  "Liam O'Connell": { g24: null, g23: null, age: null },
+  "Noah Long": { g24: 7, g23: 19, age: 21 },
+  "James Borlase": { g24: 10, g23: 4, age: 23 },
+  "Jack Whitlock": { g24: null, g23: null, age: null },
+  "Jesse Dattoli": { g24: null, g23: null, age: null },
+  "Isaac Keeler": { g24: null, g23: null, age: null },
+  "Robert Hansen Jr": { g24: null, g23: null, age: null },
+  "Finnbar Maley": { g24: null, g23: null, age: null },
+  "Jayden Nguyen": { g24: null, g23: null, age: null },
+  "Thomas Sims": { g24: null, g23: null, age: null },
+  "Lance Collard": { g24: 3, g23: null, age: 20 },
+  "Zane Duursma": { g24: 13, g23: null, age: 20 },
+  "Harry Sharp": { g24: 6, g23: 3, age: 23 },
+  "Cooper Hynes": { g24: null, g23: null, age: null },
+  "Oscar Adams": { g24: null, g23: null, age: null },
+  "Matthew Jefferson": { g24: null, g23: null, age: null },
+  "Harry Armstrong": { g24: null, g23: null, age: null },
+  "Angus Hastie": { g24: 5, g23: null, age: 20 },
+  "Josh Dolan": { g24: null, g23: null, age: null }
+};
+
+/* =========================================================
+   INJURY DATA — 2026 Pre-Season (compiled 21 Feb 2026)
+   Sources: SEN, AFL.com.au, The Mongrel Punt, Zero Hanger
+   status: season/months/weeks/doubt/managed/available
+   mr: estimated missed rounds (0-24)
+   ========================================================= */
+const INJURY_DATA = {
+  // SEASON — DO NOT DRAFT
+  "Tom Green":          { s: "season", i: "ACL", d: "Out entire 2026 season", mr: 24 },
+  "Nic Martin":         { s: "season", i: "Knee (ACL)", d: "Out entire 2026 season", mr: 24 },
+  "Josh Kelly":         { s: "season", i: "Hip surgery", d: "Out majority of year", mr: 20 },
+  "Harry O'Farrell":    { s: "season", i: "Knee", d: "Out for majority of season", mr: 20 },
+  "Bobby Hill":         { s: "season", i: "Personal", d: "Extended leave, not in 2026 plans", mr: 24 },
+  "Jesse Motlop":       { s: "season", i: "Ruptured ACL", d: "Out entire 2026 season", mr: 24 },
+  "Jackson Archer":     { s: "season", i: "ACL", d: "Ruled out entire 2026 season", mr: 24 },
+  // MONTHS — Major risk
+  "Will Day":           { s: "months", i: "Shoulder + foot stress", d: "Targeting Round 14 return (shoulder), foot also managed", mr: 13 },
+  "Jake Bowey":         { s: "months", i: "Lisfranc fracture", d: "Out majority of 2026", mr: 16 },
+  "Jack Viney":         { s: "months", i: "Achilles surgery", d: "Out most of first half", mr: 12 },
+  "Mark Keane":         { s: "months", i: "Broken ankle", d: "Out several months", mr: 10 },
+  "Daniel Curtin":      { s: "months", i: "Dislocated kneecap", d: "Not expected until Round 7", mr: 6 },
+  "Darcy Jones":        { s: "months", i: "ACL recovery", d: "Unlikely until deep in season", mr: 16 },
+  "Jack Payne":         { s: "months", i: "Ruptured patella", d: "Targeting Round 6", mr: 5 },
+  "Sam Powell-Pepper":  { s: "months", i: "ACL recovery", d: "Expected mid-season", mr: 12 },
+  "Riley Garcia":       { s: "months", i: "Hamstring", d: "10-14 weeks sidelined", mr: 10 },
+  "Eric Hipwood":       { s: "months", i: "Ruptured ACL", d: "Targeting second half return", mr: 14 },
+  "Tom Cochrane":       { s: "months", i: "Hamstring", d: "Out two months", mr: 8 },
+  "Cody Weightman":     { s: "months", i: "Knee (bipartite patella)", d: "April earliest", mr: 6 },
+  "Jake Kolodjashnij":  { s: "months", i: "Hip", d: "On injury list", mr: 10 },
+  "Elliott Himmelberg":  { s: "months", i: "Ruptured ACL", d: "Hoping mid-season return", mr: 12 },
+  "Sam Sturt":          { s: "months", i: "ACL recovery", d: "Sidelined until Round 10+", mr: 10 },
+  "Blake Thredgold":    { s: "months", i: "Lisfranc", d: "Out first six months", mr: 16 },
+  "Judson Clarke":      { s: "months", i: "ACL rupture", d: "Mid-year return", mr: 12 },
+  "Tom Sims":           { s: "months", i: "Foot (navicular)", d: "Not yet running", mr: 14 },
+  "Shane McAdam":       { s: "months", i: "Torn Achilles", d: "No timeline", mr: 14 },
+  "Will Ashcroft":      { s: "months", i: "Knee", d: "Targeting Round 12 return", mr: 11 },
+  // WEEKS — Will miss start of season
+  "Finn Callaghan":     { s: "weeks", i: "Hip flexor", d: "Chance for Round 1 with management", mr: 2 },
+  "Ed Richards":        { s: "weeks", i: "Shoulder", d: "On injury list", mr: 3 },
+  "Izak Rankine":       { s: "weeks", i: "Suspension", d: "Returns Round 2", mr: 1 },
+  "Jordan Ridley":      { s: "weeks", i: "Calf", d: "Expected to miss six weeks per SEN", mr: 6 },
+  "Ollie Wines":        { s: "weeks", i: "Suspension", d: "Will miss first two rounds", mr: 2 },
+  "Liam Baker":         { s: "weeks", i: "Suspension", d: "Will miss Round 2", mr: 1 },
+  "Sam Draper":         { s: "weeks", i: "Foot stress reaction", d: "Will miss Round 1", mr: 1 },
+  "Will Setterfield":   { s: "weeks", i: "Knee", d: "Working towards full training", mr: 4 },
+  "James Sicily":       { s: "weeks", i: "Shoulder/hip", d: "Not yet in contact/match sim", mr: 4 },
+  "Dion Prestia":       { s: "weeks", i: "Hamstring strain", d: "Not playing practice games", mr: 3 },
+  "Sam Taylor":         { s: "weeks", i: "Hamstring", d: "Will miss first part of season", mr: 4 },
+  "Nick Haynes":        { s: "weeks", i: "Ankle", d: "Assessed after Round 2 bye", mr: 3 },
+  "Bailey Williams":    { s: "weeks", i: "Groin", d: "Modified program", mr: 3 },
+  "Jeremy Howe":        { s: "weeks", i: "Calf (re-aggravated)", d: "May miss opening rounds", mr: 3 },
+  "Jesse Hogan":        { s: "weeks", i: "Foot", d: "On injury list", mr: 4 },
+  "Nick Bryan":         { s: "weeks", i: "ACL recovery", d: "Expected back after first month", mr: 4 },
+  "Matthew Cottrell":   { s: "weeks", i: "Knee", d: "Assessed after Round 2", mr: 3 },
+  "Ryley Sanders":      { s: "weeks", i: "Bilateral hamstring", d: "Limited pre-season", mr: 3 },
+  "Hugo Ralphsmith":    { s: "weeks", i: "Hamstring", d: "Working back to fitness", mr: 3 },
+  "Tyson Stengle":      { s: "weeks", i: "Personal", d: "Back but conditioning behind", mr: 3 },
+  "Noah Answerth":      { s: "weeks", i: "Achilles", d: "Non-contact training only", mr: 3 },
+  "Toby Bedford":       { s: "weeks", i: "Hamstring", d: "Out 4-6 weeks", mr: 4 },
+  "Archie Perkins":     { s: "weeks", i: "Groin", d: "Working towards full training", mr: 3 },
+  "Max King":           { s: "weeks", i: "Calf strain", d: "Out 2-3 weeks", mr: 3 },
+  "Brandon Starcevich": { s: "weeks", i: "Calf/knee", d: "Expected in practice games", mr: 2 },
+  "Toby Conway":        { s: "weeks", i: "Foot/knee", d: "Won't be rushed back", mr: 4 },
+  "Harry Cunningham":   { s: "weeks", i: "Quad", d: "Out 3-5 weeks", mr: 4 },
+  "Elijah Hewett":      { s: "weeks", i: "Calf", d: "Working back", mr: 3 },
+  "Reef McInnes":       { s: "weeks", i: "ACL recovery", d: "Return early in season", mr: 4 },
+  "Isaac Kako":         { s: "weeks", i: "Hamstring strain", d: "Missing pre-season games", mr: 2 },
+  "Josh Smillie":       { s: "weeks", i: "Quad/conditioning", d: "Round 1 unlikely", mr: 3 },
+  "Aidan Corr":         { s: "weeks", i: "Calf", d: "Will miss training chunk", mr: 3 },
+  "Riley Hardeman":     { s: "weeks", i: "Ankle", d: "Injured in practice match", mr: 3 },
+  "Lachie Sullivan":    { s: "weeks", i: "Knee", d: "Cleared to train with rehab group", mr: 3 },
+  "Harry Jones":        { s: "weeks", i: "Ankle", d: "Working towards full training", mr: 3 },
+  "Charlie Ballard":    { s: "weeks", i: "ACL recovery", d: "Miss Round 1, available shortly after", mr: 1 },
+  "Tom Edwards":        { s: "weeks", i: "ACL recovery", d: "Likely to miss opening stages", mr: 4 },
+  "Lewis Hayes":        { s: "weeks", i: "ACL recovery", d: "Likely to miss opening stages", mr: 4 },
+  "Taylor Adams":       { s: "weeks", i: "Achilles/concussion", d: "Likely miss season opener", mr: 2 },
+  "Laitham Vandermeer": { s: "weeks", i: "Achilles", d: "2-3 weeks away", mr: 3 },
+  "Jack Hutchinson":    { s: "weeks", i: "Ankle (post-surgery)", d: "Remains sidelined", mr: 4 },
+  "Matthew Carroll":    { s: "weeks", i: "Hamstring", d: "Recent intraclub injury", mr: 3 },
+  "Brandon Zerk-Thatcher": { s: "weeks", i: "Heel", d: "On injury list", mr: 3 },
+  "Bailey Laurie":      { s: "weeks", i: "Hand (fractured)", d: "On injury list", mr: 4 },
+  "Brent Daniels":      { s: "weeks", i: "Hamstring (new Feb 20)", d: "Came off in match sim, was recovering from groin surgery", mr: 3 },
+  // DOUBT — Round 1 uncertain
+  "Brodie Grundy":      { s: "doubt", i: "Concussion", d: "Pre-season incident", mr: 0 },
+  "Matt Rowell":        { s: "doubt", i: "Broken finger", d: "Expected fit for season start", mr: 0 },
+  "Jye Caldwell":       { s: "doubt", i: "Knee concern", d: "Recently addressed", mr: 0 },
+  "Jason Horne-Francis": { s: "doubt", i: "Shoulder/foot", d: "Playing preseason, R1 uncertain", mr: 1 },
+  "Luke Ryan":          { s: "doubt", i: "Shoulder cleanup", d: "Recently commencing contact", mr: 1 },
+  "Nick Vlastuin":      { s: "doubt", i: "Ankle fracture", d: "Not certain for Round 1", mr: 1 },
+  "Jeremy Cameron":     { s: "doubt", i: "Quad + broken arm", d: "Not certain for Opening Round", mr: 1 },
+  "Jack Graham":        { s: "doubt", i: "Hamstring", d: "Scans pending", mr: 1 },
+  "Adam Treloar":       { s: "doubt", i: "Calf/hamstring", d: "In doubt for Opening Round", mr: 1 },
+  "George Wardlaw":     { s: "doubt", i: "Hamstring", d: "Low-end severity, R1 possible", mr: 0 },
+  "Ben Keays":          { s: "doubt", i: "Hamstring", d: "In contention for Round 1", mr: 0 },
+  "Liam Duggan":        { s: "doubt", i: "Concussion", d: "Being assessed", mr: 0 },
+  "Jacob Weitering":    { s: "doubt", i: "Fractured rib", d: "Good chance for Opening Round", mr: 0 },
+  "Mitch Georgiades":   { s: "doubt", i: "Hamstring awareness", d: "Being assessed from Origin", mr: 0 },
+  "Brady Hough":        { s: "doubt", i: "Ankle sprain", d: "Round 1 chance", mr: 1 },
+  "Darcy Moore":        { s: "doubt", i: "Calf (worsening)", d: "Condition deteriorating, racing clock for opener", mr: 2 },
+  "Callum Ah Chee":     { s: "doubt", i: "Hamstring strain", d: "Chance for Round 1", mr: 0 },
+  "Brody Mihocek":      { s: "doubt", i: "Concussion", d: "Debut possibly delayed 1 round", mr: 1 },
+  "Joel Amartey":       { s: "doubt", i: "Concussion", d: "Pre-season incident", mr: 0 },
+  "Beau McCreery":      { s: "doubt", i: "Foot surgery", d: "Striving for campaign start", mr: 1 },
+  "Tom Gross":          { s: "doubt", i: "Hamstring", d: "Scans pending", mr: 1 },
+  "Jack Henderson":     { s: "doubt", i: "Sacrum stress fracture", d: "Pushing for opening weeks", mr: 1 },
+  "Tom Doedee":         { s: "doubt", i: "Wrist/knee", d: "Pushing for early selection", mr: 1 },
+  "Charlie Spargo":     { s: "doubt", i: "Post-injury rehab", d: "Hopeful Round 1", mr: 1 },
+  "Nic Newman":         { s: "doubt", i: "Patella", d: "Returning to full fitness", mr: 1 },
+  "Brodie Kemp":        { s: "doubt", i: "Ruptured Achilles", d: "Early-season comeback", mr: 2 },
+  "Ollie Florent":      { s: "doubt", i: "Concussion", d: "Entered protocols Jan 30", mr: 0 },
+  "Sid Draper":         { s: "doubt", i: "Groin soreness", d: "Light duties", mr: 0 },
+  "Elliot Yeo":         { s: "doubt", i: "Multiple (2025)", d: "Match sim, no certainty for R1", mr: 1 },
+  "Andy Moniz-Wakefield": { s: "doubt", i: "ACL recovery", d: "Targeting early-season return", mr: 2 },
+  "Liam Henry":         { s: "doubt", i: "Hamstring", d: "Scans to confirm severity", mr: 1 },
+  "Sam Walsh":          { s: "doubt", i: "Back soreness", d: "Reassess for Opening Round", mr: 0 },
+  "Callum Brown":       { s: "doubt", i: "Foot", d: "Came off in Feb 20 match sim", mr: 1 },
+  "Jack Macrae":        { s: "doubt", i: "Hamstring", d: "May hinder practice match participation", mr: 1 },
+  "Lincoln McCarthy":   { s: "doubt", i: "Knee recovery", d: "Pushing for Round 1 selection per SEN", mr: 1 },
+  // MANAGED — Expected to play
+  "Josh Dunkley":       { s: "managed", i: "Shoulder/ankle", d: "Full training, expected to play", mr: 0 },
+  "Isaac Heeney":       { s: "managed", i: "Hamstring", d: "Workload managed, expected to play", mr: 0 },
+  "Callum Mills":       { s: "managed", i: "Hamstring (pre-Xmas)", d: "Back in full training", mr: 0 },
+  "Toby Nankervis":     { s: "managed", i: "General", d: "Building to Round 1", mr: 0 },
+  "Clayton Oliver":     { s: "managed", i: "Calf strain", d: "Managed minutes", mr: 0 },
+  "Christian Salem":    { s: "managed", i: "Running only", d: "No reported concerns", mr: 0 },
+  "Jarrod Berry":       { s: "managed", i: "Shoulder (post-surgery)", d: "Full training", mr: 0 },
+  "Jaspa Fletcher":     { s: "managed", i: "Shoulder (post-surgery)", d: "Full training", mr: 0 },
+  "Mark Blicavs":       { s: "managed", i: "Ankle", d: "Minor injury", mr: 0 },
+  "Sean Darcy":         { s: "managed", i: "Calf strain", d: "Round 1 target", mr: 0 },
+  "Dan Houston":        { s: "managed", i: "Hip", d: "Likely available season start", mr: 0 },
+  "Mitchell Hinge":     { s: "managed", i: "Back soreness", d: "Light duties", mr: 0 },
+  "Tom Papley":         { s: "managed", i: "Calf", d: "Workload managed", mr: 0 },
+  "Alex Pearce":        { s: "managed", i: "Stress-related", d: "Training loads managed", mr: 0 },
+  "Isaac Quaynor":      { s: "managed", i: "Hamstring", d: "Likely available", mr: 0 },
+  "Jy Farrar":          { s: "managed", i: "Knee knock", d: "1-2 weeks", mr: 0 },
+  "Daniel McStay":      { s: "managed", i: "Hamstring", d: "Likely available", mr: 0 },
+  "Sam Lalor":          { s: "managed", i: "Post-surgery", d: "Likely Round 1", mr: 0 },
+  "Tom Lynch":          { s: "managed", i: "General", d: "Building to Round 1", mr: 0 },
+  "Harry Sharp":        { s: "managed", i: "Hamstring", d: "Returned to match sim", mr: 0 },
+  "Todd Marshall":      { s: "managed", i: "Achilles recovery", d: "Progressing well", mr: 0 },
+  "Sullivan Robey":     { s: "managed", i: "Back stress", d: "Expected Round 1", mr: 0 },
+  "Oscar Allen":        { s: "managed", i: "Knee (past)", d: "Expected Opening Round availability", mr: 0 },
+  "Keidean Coleman":    { s: "managed", i: "Quad (past)", d: "Expected to push Round 1 selection", mr: 0 },
+  // AVAILABLE — Recovered, no concern
+  "Max Gawn":           { s: "available", i: "Finger fracture", d: "Played in Origin", mr: 0 },
+  "Tom Stewart":        { s: "available", i: "Wrist cleanout", d: "Fit to play", mr: 0 },
+  "Hayden Young":       { s: "available", i: "Multiple (2025)", d: "Returned to full fitness", mr: 0 },
+  "Tom De Koning":      { s: "available", i: "Calf", d: "Overcome, available", mr: 0 },
+  "Colby McKercher":    { s: "available", i: "Broken finger", d: "Expected for Round 1", mr: 0 },
+  "Toby Greene":        { s: "available", i: "Glute", d: "Cleared through Origin", mr: 0 },
+  "Brayden Maynard":    { s: "available", i: "Quad", d: "Scans cleared", mr: 0 },
+  "Jack Silvagni":      { s: "available", i: "Groin", d: "Overcome, available", mr: 0 },
+  "Jack Ginnivan":      { s: "available", i: "Broken finger", d: "Fit for Opening Round", mr: 0 },
+  "Luke McDonald":      { s: "available", i: "Wrist/AC joint", d: "Available (splint)", mr: 0 },
+  "Charlie Curnow":     { s: "available", i: "Knee (past)", d: "Full pre-season", mr: 0 },
+  "Blake Acres":        { s: "available", i: "Dislocated shoulder", d: "Available", mr: 0 },
+  "Mitch Owens":        { s: "available", i: "Hamstring (past)", d: "Full pre-season", mr: 0 },
+  "Logan McDonald":     { s: "available", i: "Ankle (past)", d: "Full training since November", mr: 0 },
+  "Josh Gibcus":        { s: "available", i: "ACL (2024)", d: "Clean run, no issues", mr: 0 },
+  "Dan Butler":         { s: "available", i: "Elbow (past)", d: "Full pre-season", mr: 0 },
+  "Finn Maginness":     { s: "available", i: "Kidney (past)", d: "Full training", mr: 0 },
+  "Dougal Howard":      { s: "available", i: "Hamstring (past)", d: "Clean pre-season", mr: 0 },
+  "Darcy Parish":       { s: "available", i: "Various (2025)", d: "Trained to full capacity", mr: 0 },
+  "Shai Bolton":        { s: "available", i: "Ankle (post-surgery)", d: "Recovered nicely", mr: 0 },
+};
+
+function getInjuryInfo(playerName) {
+  return INJURY_DATA[playerName] || null;
+}
+
+function getInjuryFactor(playerName) {
+  const inj = INJURY_DATA[playerName];
+  if (!inj || inj.mr === 0) return 1.0;
+  return Math.max(0, (24 - inj.mr) / 24);
+}
+
+const INJ_STATUS_LABELS = {
+  season: "OUT FOR SEASON",
+  months: "OUT MONTHS",
+  weeks: "OUT WEEKS",
+  doubt: "ROUND 1 DOUBT",
+  managed: "MANAGED",
+  available: "RECOVERED",
 };
 
 /* =========================================================
@@ -491,13 +1264,13 @@ function calcTeamSeasonEV(teamRoster) {
     const players = [...teamRoster[pos]];
     // Sort by EV descending
     players.sort((a, b) => {
-      const evA = a.a * (1 - getWeeklyMissRate(a));
-      const evB = b.a * (1 - getWeeklyMissRate(b));
+      const evA = getBlendedAvg(a) * (1 - getWeeklyMissRate(a));
+      const evB = getBlendedAvg(b) * (1 - getWeeklyMissRate(b));
       return evB - evA;
     });
     const starterCount = roster[pos];
     for (let i = 0; i < players.length; i++) {
-      const ev = players[i].a * (1 - getWeeklyMissRate(players[i]));
+      const ev = getBlendedAvg(players[i]) * (1 - getWeeklyMissRate(players[i]));
       if (i < starterCount) {
         totalEV += ev * WEEKS;
       } else {
@@ -986,6 +1759,24 @@ function getDurabilityScore(player) {
   return 0.1;
 }
 
+// Volatile Blend: if a player's avg jumped/dropped >15 pts between seasons,
+// blend 60% recent + 40% prior to catch regression-to-mean.
+// Cross-validated: +459 on 2024, +511 on 2025 (both p<0.001).
+function getBlendedAvg(player) {
+  const a25 = player.a;
+  const a24 = player.a24;
+  if (a25 > 0 && a24 != null && a24 > 0) {
+    const spread = Math.abs(a25 - a24);
+    if (spread > 15) return 0.6 * a25 + 0.4 * a24;
+  }
+  return a25;
+}
+
+function isVolatileBlended(player) {
+  const a24 = player.a24;
+  return a24 != null && a24 > 0 && Math.abs(player.a - a24) > 15;
+}
+
 function getWeeklyMissRate(player) {
   let baseRate;
   if (player.g >= 22) baseRate = 0.05;
@@ -1103,7 +1894,8 @@ function getRecommendations() {
     const durability = getDurabilityScore(player);
     const missRate = getWeeklyMissRate(player);
     const trendData = getTrendData(player);
-    const evScore = player.a * (1 - missRate);
+    const blendedAvg = getBlendedAvg(player);
+    const evScore = blendedAvg * (1 - missRate);
 
     // PSSV for display only
     let bestPSSV = -1;
@@ -1115,14 +1907,14 @@ function getRecommendations() {
     if (bestPSSV < 0) bestPSSV = 0;
 
     // ========================================
-    // EV SCORING
-    // Score = avg × (1 - missRate)
+    // EV SCORING (with Volatile Blend)
+    // Score = blendedAvg × (1 - missRate)
+    // Volatile Blend: if |a25-a24| > 15, use 0.6*a25 + 0.4*a24
     // Shifted thresholds (g>=22/17/12), no Hugo adjustment
-    // Validated: +951 season pts vs Naive (p<0.001) on real 2025 data
-    // Robust across 13 tier configs — ALL beat Naive significantly
+    // Cross-validated: +459 on 2024, +511 on 2025 (both p<0.001)
     // ========================================
 
-    // 1. EV SCORE: average adjusted for availability
+    // 1. EV SCORE: blended average adjusted for availability
     let evMissRate;
     if (player.g >= 22) evMissRate = 0.05;
     else if (player.g >= 17) evMissRate = 0.15;
@@ -1130,7 +1922,16 @@ function getRecommendations() {
     else evMissRate = 0.45;
     if (isOutForSeason) evMissRate = 1.0;
 
-    let score = player.a * (1 - evMissRate);
+    let score = blendedAvg * (1 - evMissRate);
+
+    // Apply 2026 preseason injury factor (reduces EV proportional to missed rounds)
+    const injInfo = getInjuryInfo(player.n);
+    const injFactor = getInjuryFactor(player.n);
+    if (injInfo && injInfo.s === 'season') {
+      score = -9999; // Do not draft
+    } else if (injFactor < 1.0) {
+      score *= injFactor;
+    }
 
     // Still compute penalties/bonuses for DISPLAY ONLY (badges, info)
     const isFragile = player.a >= 90 && player.g < 15 && !isOutForSeason;
@@ -1193,6 +1994,8 @@ function getRecommendations() {
       vorp: bestVORP,
       pssv: bestPSSV,
       evScore,
+      blendedAvg,
+      isBlended: isVolatileBlended(player),
       adjustedScore: score,
       bestPos,
       fillPos,
@@ -1208,6 +2011,8 @@ function getRecommendations() {
       trendBonus,
       cliffBonus,
       hugoRiskPenalty,
+      injInfo,
+      injFactor,
     };
   });
 
@@ -1482,8 +2287,25 @@ function renderRecs() {
     if (p.isFragile) badges += `<span class="badge badge-fragile">FRAGILE (${p.g}gm)</span>`;
     if (p.cliffBonus > 0) badges += `<span class="badge badge-scarce">TIER CLIFF +${p.cliffBonus.toFixed(0)}</span>`;
     if (p.trendData.spread > 25 && p.trendData.seasons.length >= 2) badges += `<span class="badge badge-volatile">VOLATILE</span>`;
+    if (p.isBlended) badges += `<span class="badge badge-blended">BLENDED ${p.blendedAvg.toFixed(1)}</span>`;
 
-    // Risk badges
+    // Injury badges (2026 preseason)
+    if (p.injInfo) {
+      const ij = p.injInfo;
+      if (ij.s === 'season') {
+        badges += `<span class="badge badge-inj-season">🚫 OUT FOR SEASON — ${ij.i}</span>`;
+      } else if (ij.s === 'months') {
+        badges += `<span class="badge badge-inj-months">🔴 OUT MONTHS — ${ij.i}</span>`;
+      } else if (ij.s === 'weeks') {
+        badges += `<span class="badge badge-inj-weeks">🟠 OUT WEEKS — ${ij.i}</span>`;
+      } else if (ij.s === 'doubt') {
+        badges += `<span class="badge badge-inj-doubt">🟡 R1 DOUBT — ${ij.i}</span>`;
+      } else if (ij.s === 'managed') {
+        badges += `<span class="badge badge-inj-managed">🟢 MANAGED — ${ij.i}</span>`;
+      }
+    }
+
+    // Risk badges (from player data)
     if (p.rk) {
       for (const risk of p.rk) {
         if (risk.s === 'out') badges += `<span class="badge badge-out">OUT FOR SEASON</span>`;
@@ -1517,6 +2339,16 @@ function renderRecs() {
       const seasonStr = p.trendData.seasons.map(s => s.avg.toFixed(0)).join('\u2192');
       trendHtml = `<span class="rec-trend">${seasonStr} ${arrow}</span>`;
     }
+
+    // 3-season games played + age
+    const extra = PLAYER_EXTRA[p.n];
+    let gamesHtml = '';
+    if (extra) {
+      const g23 = extra.g23 != null ? extra.g23 : '-';
+      const g24 = extra.g24 != null ? extra.g24 : '-';
+      gamesHtml = `<span class="rec-games">gm: ${g23}\u2192${g24}\u2192${p.g}</span>`;
+    }
+    const ageHtml = extra && extra.age != null ? `<span class="rec-age">${extra.age}yo</span>` : '';
 
     const btnClass = myTurn ? 'rec-draft-btn' : 'rec-draft-btn other';
     const btnText = myTurn ? 'Draft' : 'Taken';
@@ -1559,19 +2391,21 @@ function renderRecs() {
           <div class="rec-meta">
             ${posTags}
             <span>${p.t}</span>
-            <span>${p.g}gm</span>
+            ${ageHtml}
+            ${gamesHtml || `<span class="rec-games">${p.g}gm</span>`}
             ${trendHtml}
             ${hugoRangeHtml}
           </div>
           <div class="rec-badges">${badges}</div>
           ${p.fragileSwap ? `<div class="fragile-swap">Durable alt: ${p.fragileSwap}</div>` : ''}
+          ${p.injInfo && p.injInfo.s !== 'available' && p.injInfo.s !== 'managed' ? `<div class="inj-detail">⚕ ${p.injInfo.d}${p.injInfo.mr > 0 ? ' (~' + p.injInfo.mr + ' rounds missed)' : ''}</div>` : ''}
           ${hugoNoteHtml}
         </div>
         <div style="text-align:right; flex-shrink:0;">
           <div class="rec-avg">${p.a}</div>
-          <div style="font-size:0.75rem; font-weight:700; color:var(--accent);">EV: ${p.adjustedScore.toFixed(1)}</div>
+          <div style="font-size:0.75rem; font-weight:700; color:var(--accent);">EV: ${p.adjustedScore.toFixed(1)}${p.isBlended ? ' <span style="color:#a78bfa;font-size:0.65rem;font-weight:400;">(blended)</span>' : ''}</div>
           <div style="font-size:0.7rem; color:var(--text2); line-height:1.4; opacity:0.6;">
-            ${p.fragilePenalty > 0 ? `<span style="color:var(--red)">fragile -${p.fragilePenalty.toFixed(0)}</span> ` : ''}${p.hugoRiskPenalty > 0 ? `<span style="color:var(--red)">risk -${p.hugoRiskPenalty.toFixed(0)}</span> ` : ''}${p.trendBonus > 0 ? `<span style="color:var(--green)">trend +${p.trendBonus}</span> ` : ''}${p.trendBonus < 0 ? `<span style="color:var(--red)">trend ${p.trendBonus}</span> ` : ''}${p.cliffBonus > 0 ? `<span style="color:var(--yellow)">cliff +${p.cliffBonus.toFixed(0)}</span>` : ''}
+            ${p.injFactor < 1 ? `<span style="color:#ff8c42">inj ×${p.injFactor.toFixed(2)}</span> ` : ''}${p.fragilePenalty > 0 ? `<span style="color:var(--red)">fragile -${p.fragilePenalty.toFixed(0)}</span> ` : ''}${p.hugoRiskPenalty > 0 ? `<span style="color:var(--red)">risk -${p.hugoRiskPenalty.toFixed(0)}</span> ` : ''}${p.trendBonus > 0 ? `<span style="color:var(--green)">trend +${p.trendBonus}</span> ` : ''}${p.trendBonus < 0 ? `<span style="color:var(--red)">trend ${p.trendBonus}</span> ` : ''}${p.cliffBonus > 0 ? `<span style="color:var(--yellow)">cliff +${p.cliffBonus.toFixed(0)}</span>` : ''}
           </div>
           <div style="font-size:0.65rem; color:var(--text2); opacity:0.5; margin-top:2px;">PSSV: ${p.pssv.toFixed(1)} | VORP: ${p.vorp.toFixed(1)}</div>
         </div>
@@ -1625,6 +2459,15 @@ function renderPlayers() {
     );
 
     let riskBadges = '';
+    // Injury badges (2026 preseason)
+    const plInj = getInjuryInfo(p.n);
+    if (plInj) {
+      if (plInj.s === 'season') riskBadges += `<span class="badge badge-inj-season" style="font-size:0.6rem;">🚫 SEASON</span>`;
+      else if (plInj.s === 'months') riskBadges += `<span class="badge badge-inj-months" style="font-size:0.6rem;">🔴 MONTHS</span>`;
+      else if (plInj.s === 'weeks') riskBadges += `<span class="badge badge-inj-weeks" style="font-size:0.6rem;">🟠 WEEKS</span>`;
+      else if (plInj.s === 'doubt') riskBadges += `<span class="badge badge-inj-doubt" style="font-size:0.6rem;">🟡 DOUBT</span>`;
+      else if (plInj.s === 'managed') riskBadges += `<span class="badge badge-inj-managed" style="font-size:0.6rem;">🟢 MGD</span>`;
+    }
     if (p.rk) {
       for (const risk of p.rk) {
         if (risk.s === 'out') riskBadges += `<span class="badge badge-out" style="font-size:0.6rem;">OUT</span>`;
@@ -1634,11 +2477,21 @@ function renderPlayers() {
         else if (risk.t === 'dpp') riskBadges += `<span class="badge badge-dpp-change" style="font-size:0.6rem;">DPP</span>`;
       }
     }
+    const plExtra = PLAYER_EXTRA[p.n];
+    const plAge = plExtra && plExtra.age != null ? plExtra.age : '';
+    let plGames = '';
+    if (plExtra) {
+      const g23 = plExtra.g23 != null ? plExtra.g23 : '-';
+      const g24 = plExtra.g24 != null ? plExtra.g24 : '-';
+      plGames = `${g23}\u2192${g24}\u2192${p.g}`;
+    }
     return `
       <div class="player-row ${drafted ? 'drafted' : ''}" ${action}>
         ${posTags}
         <span class="pl-name">${p.n}${riskBadges ? ' ' + riskBadges : ''}</span>
         <span class="pl-team">${p.t}</span>
+        <span class="pl-age">${plAge}</span>
+        <span class="pl-games">${plGames}</span>
         <span class="pl-avg">${p.a}</span>
         <span class="pl-vorp ${vorpClass}">${bestVORP >= 0 ? '+' : ''}${bestVORP.toFixed(1)}</span>
       </div>

@@ -152,6 +152,8 @@ input, select { font-family: inherit; }
 /* Undo */
 .undo-btn { position: fixed; bottom: 20px; right: 20px; background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 .undo-btn:hover { border-color: var(--accent); }
+.skip-btn { position: fixed; bottom: 20px; right: 110px; background: var(--bg3); color: var(--text2); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.skip-btn:hover { border-color: var(--yellow); color: var(--yellow); }
 
 /* Confirmation modal */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
@@ -342,6 +344,7 @@ input, select { font-family: inherit; }
     </div>
   </div>
 
+  <button class="skip-btn" onclick="skipPick()">Skip Pick</button>
   <button class="undo-btn" onclick="undoPick()">&#8630; Undo</button>
 </div>
 
@@ -2171,6 +2174,13 @@ function undoPick() {
   render();
 }
 
+function skipPick() {
+  const pickNum = state.currentPick;
+  state.picks.push({ player: { n: '(Unknown player)', p: '?', a: 0, g: 0 }, pickNum, isMyPick: false, pickPos: null, isBenchPick: false, isSkipped: true });
+  state.currentPick++;
+  render();
+}
+
 function removePlayer(playerName) {
   state.removedNames.add(playerName);
   render();
@@ -2652,6 +2662,17 @@ function renderLog() {
   }
 
   container.innerHTML = [...state.picks].reverse().map(pick => {
+    if (pick.isSkipped) {
+      return `
+        <div class="log-entry" style="opacity:0.5;">
+          <span class="log-pick">#${pick.pickNum}</span>
+          <span class="log-name" style="font-style:italic;">Unknown player</span>
+          <span style="font-size:0.75rem;color:var(--text2); width:35px; text-align:right;">
+            T${getPickTeam(pick.pickNum)}
+          </span>
+        </div>
+      `;
+    }
     const positions = getPositions(pick.player);
     const posTags = positions.map(pos =>
       `<span class="pos-tag pos-tag-${pos}" style="font-size:0.7rem;">${pos}</span>`
@@ -2662,7 +2683,7 @@ function renderLog() {
         <span class="log-pick">#${pick.pickNum}</span>
         ${posTags}
         <span class="log-name">${pick.player.n}</span>
-        <span style="color:var(--text2);font-size:0.8rem;">${pick.player.t}</span>
+        <span style="color:var(--text2);font-size:0.8rem;">${pick.player.t || ''}</span>
         <span style="font-weight:600;width:40px;text-align:right;">${pick.player.a}</span>
         <span style="font-size:0.75rem;color:${pick.isMyPick ? 'var(--green)' : 'var(--text2)'}; width:35px; text-align:right;">
           ${pick.isMyPick ? 'YOU' : 'T' + getPickTeam(pick.pickNum)}

@@ -107,6 +107,13 @@ input, select { font-family: inherit; }
 .rec-draft-btn:hover { opacity: 0.85; }
 .rec-draft-btn.other { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
 .rec-draft-btn.other:hover { border-color: var(--red); color: var(--red); }
+.rec-remove-btn { background: transparent; color: var(--text2); border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
+.rec-remove-btn:hover { opacity: 1; border-color: var(--red); color: var(--red); background: rgba(255,69,58,0.1); }
+.pl-remove-btn { background: transparent; color: var(--text2); border: none; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; opacity: 0.4; transition: all 0.2s; flex-shrink: 0; }
+.pl-remove-btn:hover { opacity: 1; color: var(--red); background: rgba(255,69,58,0.15); }
+#removed-bar { display: none; align-items: center; gap: 8px; padding: 6px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; font-size: 0.8rem; color: var(--text2); }
+#removed-bar button { background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
+#removed-bar button:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Players Tab */
 .search-bar { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -308,6 +315,7 @@ input, select { font-family: inherit; }
   </div>
 
   <div id="tab-recs" class="tab-content">
+    <div id="removed-bar"></div>
     <div class="recs" id="recs-list"></div>
   </div>
 
@@ -375,6 +383,7 @@ let state = {
   picks: [],            // { player, pickNum, isMyPick, pickPos }
   myTeam: { DEF: [], MID: [], RUC: [], FWD: [] },
   draftedNames: new Set(),
+  removedNames: new Set(),
   tiers: {},            // { DEF: { playerName: tierNum }, ... }
   replacementLevels: {},
   activeTab: 'recs',
@@ -1212,7 +1221,7 @@ function getPickTeam(pickNum) {
 }
 
 function getAvailable() {
-  return PLAYER_DATA.filter(p => !state.draftedNames.has(p.n));
+  return PLAYER_DATA.filter(p => !state.draftedNames.has(p.n) && !state.removedNames.has(p.n));
 }
 
 function getRosterNeeds() {
@@ -2163,6 +2172,23 @@ function undoPick() {
   render();
 }
 
+function removePlayer(playerName) {
+  state.removedNames.add(playerName);
+  render();
+}
+
+function undoRemoveAll() {
+  state.removedNames.clear();
+  render();
+}
+
+function undoRemoveLast() {
+  const arr = Array.from(state.removedNames);
+  if (arr.length === 0) return;
+  state.removedNames.delete(arr[arr.length - 1]);
+  render();
+}
+
 function showDraftModal(playerName, asMyPick) {
   const player = PLAYER_DATA.find(p => p.n === playerName);
   if (!player) return;
@@ -2418,10 +2444,24 @@ function renderRecs() {
           </div>
           <div style="font-size:0.65rem; color:var(--text2); opacity:0.5; margin-top:2px;">PSSV: ${p.pssv.toFixed(1)} | VORP: ${p.vorp.toFixed(1)}</div>
         </div>
-        <button class="${btnClass}" onclick="${btnAction}">${btnText}</button>
+        <div style="display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+          <button class="${btnClass}" onclick="${btnAction}">${btnText}</button>
+          <button class="rec-remove-btn" onclick="event.stopPropagation(); removePlayer('${p.n.replace(/'/g, "\\'")}')" title="Remove from pool">✕</button>
+        </div>
       </div>
     `;
   }).join('');
+
+  // Show removed count + restore button
+  const removedBar = document.getElementById('removed-bar');
+  if (removedBar) {
+    if (state.removedNames.size > 0) {
+      removedBar.innerHTML = `<span>${state.removedNames.size} player${state.removedNames.size > 1 ? 's' : ''} removed</span> <button onclick="undoRemoveLast()">Undo Last</button> <button onclick="undoRemoveAll()">Restore All</button>`;
+      removedBar.style.display = 'flex';
+    } else {
+      removedBar.style.display = 'none';
+    }
+  }
 }
 
 function renderPlayers() {
@@ -2438,8 +2478,8 @@ function renderPlayers() {
     players = players.filter(p => p.n.toLowerCase().includes(search));
   }
 
-  // Hide already-drafted players so the list always shows available ones
-  players = players.filter(p => !state.draftedNames.has(p.n));
+  // Hide already-drafted and removed players so the list always shows available ones
+  players = players.filter(p => !state.draftedNames.has(p.n) && !state.removedNames.has(p.n));
 
   // Show max 100 players
   const shown = players.slice(0, 100);
@@ -2503,6 +2543,7 @@ function renderPlayers() {
         <span class="pl-games">${plGames}</span>
         <span class="pl-avg">${p.a}</span>
         <span class="pl-vorp ${vorpClass}">${bestVORP >= 0 ? '+' : ''}${bestVORP.toFixed(1)}</span>
+        <button class="pl-remove-btn" onclick="event.stopPropagation(); removePlayer('${p.n.replace(/'/g, "\\'")}')" title="Remove from pool">✕</button>
       </div>
     `;
   }).join('');

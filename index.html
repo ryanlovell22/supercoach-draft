@@ -270,23 +270,11 @@ input, select { font-family: inherit; }
   </div>
 
   <div class="config-group">
-    <h3>Bench</h3>
+    <h3>Bench (any position)</h3>
     <div class="roster-grid">
       <div class="roster-item">
-        <span class="pos-badge pos-def">DEF</span>
-        <input type="number" id="cfg-bdef" value="0" min="0" max="6">
-      </div>
-      <div class="roster-item">
-        <span class="pos-badge pos-mid">MID</span>
-        <input type="number" id="cfg-bmid" value="1" min="0" max="6">
-      </div>
-      <div class="roster-item">
-        <span class="pos-badge pos-ruc">RUC</span>
-        <input type="number" id="cfg-bruc" value="1" min="0" max="4">
-      </div>
-      <div class="roster-item">
-        <span class="pos-badge pos-fwd">FWD</span>
-        <input type="number" id="cfg-bfwd" value="1" min="0" max="6">
+        <span class="pos-badge" style="background:var(--bg3);color:var(--text);">BENCH</span>
+        <input type="number" id="cfg-bench" value="3" min="0" max="8">
       </div>
     </div>
   </div>
@@ -382,6 +370,7 @@ let state = {
   currentPick: 1,       // 1-indexed overall pick number
   picks: [],            // { player, pickNum, isMyPick, pickPos }
   myTeam: { DEF: [], MID: [], RUC: [], FWD: [] },
+  myBench: [],  // flexible bench — any position
   draftedNames: new Set(),
   removedNames: new Set(),
   tiers: {},            // { DEF: { playerName: tierNum }, ... }
@@ -1225,18 +1214,19 @@ function getAvailable() {
 }
 
 function getRosterNeeds() {
-  const { roster, bench } = state.config;
+  const { roster, benchTotal } = state.config;
   const needs = {};
   for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
-    const total = roster[pos] + bench[pos];
-    const have = state.myTeam[pos].length;
-    needs[pos] = Math.max(0, total - have);
+    needs[pos] = Math.max(0, roster[pos] - state.myTeam[pos].length);
   }
+  needs._startersLeft = Object.values(needs).reduce((s, v) => s + v, 0);
+  needs._benchLeft = Math.max(0, benchTotal - state.myBench.length);
+  needs._totalLeft = needs._startersLeft + needs._benchLeft;
   return needs;
 }
 
 function getMyTotalPicks() {
-  let total = 0;
+  let total = state.myBench.length;
   for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
     total += state.myTeam[pos].length;
   }
@@ -1247,7 +1237,8 @@ function getMyTotalPicks() {
    LEAGUE CHARTS — All-Team Rosters & Canvas Drawing
    ========================================================= */
 function buildAllTeamRosters(picksSubset) {
-  const { numTeams, roster, bench } = state.config;
+  const { numTeams, roster, benchTotal } = state.config;
+  const totalPerTeam = Object.values(roster).reduce((s, v) => s + v, 0) + benchTotal;
   const teams = {};
   for (let t = 1; t <= numTeams; t++) {
     teams[t] = { DEF: [], MID: [], RUC: [], FWD: [] };
@@ -1257,15 +1248,13 @@ function buildAllTeamRosters(picksSubset) {
     if (pick.isMyPick && pick.pickPos) {
       teams[teamNum][pick.pickPos].push(pick.player);
     } else {
-      // Opponent pick: assign to position with most remaining need
+      // Opponent pick: assign to position with most remaining starter need, then any
       const positions = getPositions(pick.player);
       let bestPos = positions[0];
       let bestNeed = -1;
       for (const pos of positions) {
-        const total = roster[pos] + bench[pos];
-        const have = teams[teamNum][pos].length;
-        const need = total - have;
-        if (need > bestNeed) { bestNeed = need; bestPos = pos; }
+        const starterNeed = roster[pos] - teams[teamNum][pos].length;
+        if (starterNeed > bestNeed) { bestNeed = starterNeed; bestPos = pos; }
       }
       teams[teamNum][bestPos].push(pick.player);
     }
@@ -1274,7 +1263,7 @@ function buildAllTeamRosters(picksSubset) {
 }
 
 function calcTeamSeasonEV(teamRoster) {
-  const { roster, bench } = state.config;
+  const { roster } = state.config;
   let totalEV = 0;
   const WEEKS = 24;
   const BENCH_FACTOR = 0.50;
@@ -1688,19 +1677,18 @@ function renderLeagueCharts() {
    PSSV & SCORING ENGINE
    ========================================================= */
 function calculateReplacementLevels(available) {
-  const { numTeams, roster, bench } = state.config;
+  const { numTeams, roster, benchTotal } = state.config;
   const levels = {};
   const scarcity = {};
+  const benchPerPos = benchTotal / 4;  // Estimate bench demand spread evenly
   for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
     const posPlayers = available.filter(p => playerHasPosition(p, pos));
     posPlayers.sort((a, b) => b.a - a.a);
-    // Total demand: every team needs starters + bench at each position
-    const totalDemand = numTeams * (roster[pos] + bench[pos]);
+    // Total demand: starters + estimated bench share
+    const totalDemand = numTeams * (roster[pos] + benchPerPos);
     const supply = posPlayers.length;
-    // Scarcity ratio: < 1 means not enough players exist for all teams
     scarcity[pos] = supply / totalDemand;
-    // Replacement level: the last player who would be drafted
-    const replIdx = Math.min(totalDemand, supply - 1);
+    const replIdx = Math.min(Math.round(totalDemand), supply - 1);
     levels[pos] = replIdx >= 0 ? (posPlayers[replIdx]?.a || 0) : 0;
   }
   state.replacementLevels = levels;
@@ -1829,15 +1817,17 @@ function getRecommendations() {
   const totalNeeds = Object.values(needs).reduce((s, v) => s + v, 0);
 
   const totalSlots = Object.values(state.config.roster).reduce((s, v) => s + v, 0)
-    + Object.values(state.config.bench).reduce((s, v) => s + v, 0);
+    + state.config.benchTotal;
 
   // Pick gap for PSSV calculation (display only)
   const gap = getPickGap() || 1;
 
-  // Demand share per position
+  // Demand share per position (bench spread evenly for estimation)
+  const starterSlots = Object.values(state.config.roster).reduce((s, v) => s + v, 0);
+  const benchPerPos = state.config.benchTotal / 4;
   const demandShare = {};
   for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
-    demandShare[pos] = (state.config.roster[pos] + state.config.bench[pos]) / totalSlots;
+    demandShare[pos] = (state.config.roster[pos] + benchPerPos) / totalSlots;
   }
 
   // Available players per position (sorted by avg, excluding out-for-season)
@@ -1980,10 +1970,13 @@ function getRecommendations() {
       }
     }
 
-    // HARD CONSTRAINTS (unchanged)
+    // HARD CONSTRAINTS
     if (isOutForSeason) score -= 9999;
-    const canFillNeeded = positions.some(pos => needs[pos] > 0);
-    if (!canFillNeeded && totalNeeds > 0) score -= 9999;
+    const canFillStarter = positions.some(pos => needs[pos] > 0);
+    const canFillBench = needs._benchLeft > 0;
+    // Penalise if this player can't fill any starter need AND starters still needed
+    if (!canFillStarter && needs._startersLeft > 0) score -= 9999;
+    // If all starters filled, anyone can fill bench — no penalty needed
 
     // Determine fill position: prefer position with highest need
     let fillPos = positions[0];
@@ -2129,8 +2122,10 @@ function draftPlayer(playerName, isMyPick) {
   state.draftedNames.add(playerName);
   const pickNum = state.currentPick;
 
-  // Determine position for my team (prefer position with highest remaining need)
+  // Determine position for my team
+  // Priority: fill starter slots first (prefer position with highest need), then bench
   let pickPos = null;
+  let isBenchPick = false;
   if (isMyPick) {
     const positions = getPositions(player);
     const needs = getRosterNeeds();
@@ -2142,18 +2137,20 @@ function draftPlayer(playerName, isMyPick) {
         pickPos = pos;
       }
     }
-    // Fallback: if no needed position, use position with most room
-    if (maxNeed < 0) {
-      let bestRoom = -1;
-      for (const pos of positions) {
-        const room = (state.config.roster[pos] + state.config.bench[pos]) - state.myTeam[pos].length;
-        if (room > bestRoom) { bestRoom = room; pickPos = pos; }
-      }
+    if (maxNeed > 0) {
+      // Filling a starter slot
+      state.myTeam[pickPos].push(player);
+    } else if (needs._benchLeft > 0) {
+      // All starter slots filled for this player's positions — goes to bench
+      isBenchPick = true;
+      state.myBench.push({ ...player, benchPos: pickPos });
+    } else {
+      // Overflow — shouldn't happen but handle gracefully
+      state.myTeam[pickPos].push(player);
     }
-    state.myTeam[pickPos].push(player);
   }
 
-  state.picks.push({ player, pickNum, isMyPick, pickPos });
+  state.picks.push({ player, pickNum, isMyPick, pickPos, isBenchPick });
   state.currentPick++;
   render();
 }
@@ -2164,10 +2161,15 @@ function undoPick() {
   state.draftedNames.delete(last.player.n);
   state.currentPick--;
 
-  if (last.isMyPick && last.pickPos) {
-    const arr = state.myTeam[last.pickPos];
-    const idx = arr.findIndex(p => p.n === last.player.n);
-    if (idx >= 0) arr.splice(idx, 1);
+  if (last.isMyPick) {
+    if (last.isBenchPick) {
+      const idx = state.myBench.findIndex(p => p.n === last.player.n);
+      if (idx >= 0) state.myBench.splice(idx, 1);
+    } else if (last.pickPos) {
+      const arr = state.myTeam[last.pickPos];
+      const idx = arr.findIndex(p => p.n === last.player.n);
+      if (idx >= 0) arr.splice(idx, 1);
+    }
   }
   render();
 }
@@ -2573,16 +2575,14 @@ function renderMyTeam() {
 
   for (const pos of ['DEF', 'MID', 'RUC', 'FWD']) {
     const players = state.myTeam[pos];
-    const total = state.config.roster[pos] + state.config.bench[pos];
-    const starters = state.config.roster[pos];
+    const starterSlots = state.config.roster[pos];
 
     html += `
       <div class="team-pos-group">
         <div class="team-pos-header">
           <span class="team-pos-title ${getPosClass(pos)}">${pos}</span>
           <span class="team-pos-count">
-            <span class="${players.length >= total ? 'filled' : ''}">${players.length}</span>/${total}
-            (${starters} start, ${state.config.bench[pos]} bench)
+            <span class="${players.length >= starterSlots ? 'filled' : ''}">${players.length}</span>/${starterSlots}
           </span>
         </div>
     `;
@@ -2591,10 +2591,9 @@ function renderMyTeam() {
       html += '<div class="team-empty">No players drafted yet</div>';
     } else {
       players.forEach((p, i) => {
-        const role = i < starters ? 'Starter' : 'Bench';
         html += `
           <div class="team-player">
-            <span>${p.n} <span style="color:var(--text2);font-size:0.8rem">${p.t} — ${role}</span></span>
+            <span>${p.n} <span style="color:var(--text2);font-size:0.8rem">${p.t}</span></span>
             <span class="tp-avg">${p.a}</span>
           </div>
         `;
@@ -2604,8 +2603,37 @@ function renderMyTeam() {
     html += '</div>';
   }
 
+  // Bench section
+  const benchTotal = state.config.benchTotal;
+  html += `
+    <div class="team-pos-group">
+      <div class="team-pos-header">
+        <span class="team-pos-title" style="background:var(--bg3);color:var(--text);padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:700;">BENCH</span>
+        <span class="team-pos-count">
+          <span class="${state.myBench.length >= benchTotal ? 'filled' : ''}">${state.myBench.length}</span>/${benchTotal}
+          (any position)
+        </span>
+      </div>
+  `;
+  if (state.myBench.length === 0) {
+    html += '<div class="team-empty">No bench players yet</div>';
+  } else {
+    state.myBench.forEach(p => {
+      const positions = getPositions(p);
+      const posTags = positions.map(pos => `<span class="pos-tag pos-tag-${pos}" style="font-size:0.6rem;padding:1px 4px;">${pos}</span>`).join(' ');
+      html += `
+        <div class="team-player">
+          <span>${posTags} ${p.n} <span style="color:var(--text2);font-size:0.8rem">${p.t}</span></span>
+          <span class="tp-avg">${p.a}</span>
+        </div>
+      `;
+    });
+  }
+  html += '</div>';
+
   // Team summary
-  const totalAvg = Object.values(state.myTeam).flat().reduce((s, p) => s + p.a, 0);
+  const benchAvg = state.myBench.reduce((s, p) => s + p.a, 0);
+  const totalAvg = Object.values(state.myTeam).flat().reduce((s, p) => s + p.a, 0) + benchAvg;
   const totalPlayers = getMyTotalPicks();
   if (totalPlayers > 0) {
     html += `
@@ -2691,17 +2719,12 @@ function startDraft() {
       RUC: parseInt(document.getElementById('cfg-ruc').value),
       FWD: parseInt(document.getElementById('cfg-fwd').value),
     },
-    bench: {
-      DEF: parseInt(document.getElementById('cfg-bdef').value),
-      MID: parseInt(document.getElementById('cfg-bmid').value),
-      RUC: parseInt(document.getElementById('cfg-bruc').value),
-      FWD: parseInt(document.getElementById('cfg-bfwd').value),
-    },
+    benchTotal: parseInt(document.getElementById('cfg-bench').value),
   };
 
   // Validate rounds match roster
   const totalSlots = Object.values(state.config.roster).reduce((s, v) => s + v, 0)
-    + Object.values(state.config.bench).reduce((s, v) => s + v, 0);
+    + state.config.benchTotal;
 
   if (state.config.rounds !== totalSlots) {
     const proceed = confirm(

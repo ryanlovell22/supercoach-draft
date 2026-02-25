@@ -67,7 +67,6 @@ input, select { font-family: inherit; }
 .alerts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .alert { padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; }
 .alert-cliff { background: rgba(234, 179, 8, 0.15); color: var(--yellow); border: 1px solid rgba(234, 179, 8, 0.3); }
-.alert-run { background: rgba(108, 99, 255, 0.15); color: #a09cff; border: 1px solid rgba(108, 99, 255, 0.3); }
 .alert-need { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.3); }
 .alert-myturn { background: rgba(34, 197, 94, 0.15); color: var(--green); border: 1px solid rgba(34, 197, 94, 0.3); font-size: 1rem; text-align: center; }
 
@@ -2069,7 +2068,6 @@ function getAlerts() {
     const posAvail = available.filter(p => playerHasPosition(p, pos));
     posAvail.sort((a, b) => b.a - a.a);
 
-    // Check top tiers (only for players with meaningful averages)
     const minAvgForAlert = pos === 'RUC' ? 60 : 75;
     for (let tierNum = 1; tierNum <= 2; tierNum++) {
       const inTier = posAvail.filter(p =>
@@ -2087,25 +2085,6 @@ function getAlerts() {
         alerts.push({
           type: 'cliff',
           text: `Only 2 ${label} ${pos}s left: ${inTier[0].n}, ${inTier[1].n}`
-        });
-      }
-    }
-  }
-
-  // Run detection - last 5 picks same position
-  if (state.picks.length >= 3) {
-    const last5 = state.picks.slice(-5);
-    const posCounts = {};
-    last5.forEach(pick => {
-      getPositions(pick.player).forEach(pos => {
-        posCounts[pos] = (posCounts[pos] || 0) + 1;
-      });
-    });
-    for (const [pos, count] of Object.entries(posCounts)) {
-      if (count >= 3) {
-        alerts.push({
-          type: 'run',
-          text: `Run on ${pos}: ${count} of last ${last5.length} picks were ${pos}s`
         });
       }
     }

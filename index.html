@@ -949,13 +949,13 @@ const PLAYER_EXTRA = {
 };
 
 /* =========================================================
-   INJURY DATA — 2026 Pre-Season (compiled 21 Feb 2026)
+   INJURY DATA — 2026 Pre-Season (refreshed 26 Feb 2026)
    Sources: SEN, AFL.com.au, The Mongrel Punt, Zero Hanger
    status: season/months/weeks/doubt/managed/available
    mr: estimated missed rounds (0-24)
    ========================================================= */
 const INJURY_DATA = {
-  // SEASON — DO NOT DRAFT (updated 2026-02-24)
+  // SEASON — DO NOT DRAFT (updated 2026-02-26)
   "Tom Green":          { s: "season", i: "ACL", d: "Out entire 2026 season", mr: 24 },
   "Nic Martin":         { s: "season", i: "Knee (ACL)", d: "Out entire 2026 season", mr: 24 },
   "Josh Kelly":         { s: "season", i: "Hip surgery", d: "Out majority of year", mr: 20 },
@@ -966,6 +966,7 @@ const INJURY_DATA = {
   "Harley Barker":      { s: "season", i: "ACL", d: "Expected to miss majority of season", mr: 20 },
   "Noah Long":          { s: "season", i: "Multi-ligament knee", d: "Season over, surgery required (Feb 22 match sim)", mr: 24 },
   "Ivan Soldo":         { s: "season", i: "Ruptured ACL", d: "Out entire 2026 season", mr: 24 },
+  "James Harmes":       { s: "season", i: "Retired", d: "Retired from AFL", mr: 24 },
   // MONTHS — Major risk
   "Will Day":           { s: "months", i: "Shoulder + foot stress", d: "Targeting Round 14 return (shoulder), foot also managed", mr: 13 },
   "Jake Bowey":         { s: "months", i: "Lisfranc fracture", d: "Out majority of 2026", mr: 16 },
@@ -988,20 +989,21 @@ const INJURY_DATA = {
   "Shane McAdam":       { s: "months", i: "Torn Achilles", d: "No timeline", mr: 14 },
   "Will Ashcroft":      { s: "months", i: "Knee", d: "Targeting Round 12 return", mr: 11 },
   "Sam Allen":          { s: "months", i: "ACL tear", d: "Expected to miss season start", mr: 10 },
+  "Taj Hotton":         { s: "months", i: "Hip (bone stress)", d: "Set to miss first four months", mr: 10 },
   // WEEKS — Will miss start of season
   "Matt Rowell":        { s: "weeks", i: "Broken finger (surgery)", d: "Surgery confirmed, post-bye return ~Round 4", mr: 3 },
   "Adam Cerra":         { s: "weeks", i: "Hamstring strain", d: "Left match sim Q3, miss opening rounds", mr: 3 },
   "Finn Callaghan":     { s: "weeks", i: "Hip flexor", d: "Chance for Round 1 with management", mr: 2 },
   "Ed Richards":        { s: "weeks", i: "Shoulder", d: "On injury list", mr: 3 },
-  "Izak Rankine":       { s: "weeks", i: "Suspension", d: "Returns Round 2", mr: 1 },
+  "Izak Rankine":       { s: "weeks", i: "Suspension + hamstring", d: "Returns Round 2, also hamstring concern", mr: 2 },
   "Jordan Ridley":      { s: "weeks", i: "Calf", d: "Expected to miss six weeks per SEN", mr: 6 },
   "Ollie Wines":        { s: "weeks", i: "Suspension", d: "Will miss first two rounds", mr: 2 },
   "Liam Baker":         { s: "weeks", i: "Suspension", d: "Will miss Round 2", mr: 1 },
   "Sam Draper":         { s: "weeks", i: "Foot stress reaction", d: "Will miss Round 1", mr: 1 },
   "Will Setterfield":   { s: "weeks", i: "Knee", d: "Working towards full training", mr: 4 },
-  "James Sicily":       { s: "weeks", i: "Shoulder/hip", d: "Not yet in contact/match sim", mr: 4 },
+  "George Wardlaw":     { s: "weeks", i: "Hamstring (re-aggravated)", d: "Worse hamstring, out a month", mr: 4 },
   "Dion Prestia":       { s: "weeks", i: "Hamstring strain", d: "Not playing practice games", mr: 3 },
-  "Sam Taylor":         { s: "weeks", i: "Hamstring", d: "Will miss first part of season", mr: 4 },
+  "Sam Taylor":         { s: "weeks", i: "Hamstring (high-grade)", d: "High-grade sprain from Origin, miss first part of season", mr: 6 },
   "Nick Haynes":        { s: "weeks", i: "Ankle", d: "Assessed after Round 2 bye", mr: 3 },
   "Bailey Williams":    { s: "weeks", i: "Groin", d: "Modified program", mr: 3 },
   "Jeremy Howe":        { s: "weeks", i: "Calf (re-aggravated)", d: "May miss opening rounds", mr: 3 },
@@ -1011,10 +1013,10 @@ const INJURY_DATA = {
   "Ryley Sanders":      { s: "weeks", i: "Bilateral hamstring", d: "Limited pre-season", mr: 3 },
   "Hugo Ralphsmith":    { s: "weeks", i: "Hamstring", d: "Working back to fitness", mr: 3 },
   "Tyson Stengle":      { s: "weeks", i: "Personal", d: "Confirmed miss Opening Round, no firm return date", mr: 4 },
-  "Noah Answerth":      { s: "weeks", i: "Achilles", d: "Non-contact training only", mr: 3 },
+  // Noah Answerth upgraded to MANAGED (returned to training, SEN 24/02)
   "Toby Bedford":       { s: "weeks", i: "Hamstring", d: "Out 4-6 weeks", mr: 4 },
   "Archie Perkins":     { s: "weeks", i: "Groin", d: "Working towards full training", mr: 3 },
-  "Max King":           { s: "weeks", i: "Calf strain", d: "Out 2-3 weeks", mr: 3 },
+  "Max King":           { s: "months", i: "Back stress fractures", d: "SYD rookie, up to 6 months out", mr: 14 },
   "Toby Conway":        { s: "weeks", i: "Foot/knee", d: "Won't be rushed back", mr: 4 },
   "Harry Cunningham":   { s: "weeks", i: "Quad", d: "Out 3-5 weeks", mr: 4 },
   "Elijah Hewett":      { s: "weeks", i: "Calf", d: "Working back", mr: 3 },
@@ -1034,7 +1036,7 @@ const INJURY_DATA = {
   "Matthew Carroll":    { s: "weeks", i: "Hamstring", d: "Recent intraclub injury", mr: 3 },
   "Brandon Zerk-Thatcher": { s: "weeks", i: "Heel", d: "On injury list", mr: 3 },
   "Bailey Laurie":      { s: "weeks", i: "Hand (fractured)", d: "On injury list", mr: 4 },
-  "Brent Daniels":      { s: "weeks", i: "Hamstring (new Feb 20)", d: "Fresh hamstring on top of groin surgery recovery", mr: 3 },
+  // Brent Daniels upgraded to DOUBT (eyeing Opening Round, SEN)
   "Gryan Miers":        { s: "weeks", i: "Thumb", d: "Will miss Opening Round", mr: 1 },
   "Ned Bowman":         { s: "weeks", i: "Hamstring", d: "Will miss approximately eight weeks", mr: 8 },
   // DOUBT — Round 1 uncertain
@@ -1043,19 +1045,19 @@ const INJURY_DATA = {
   "Jason Horne-Francis": { s: "doubt", i: "Shoulder/foot", d: "Playing preseason, R1 uncertain", mr: 1 },
   "Luke Ryan":          { s: "doubt", i: "Shoulder cleanup", d: "Recently commencing contact", mr: 1 },
   "Adam Treloar":       { s: "doubt", i: "Calf/hamstring", d: "In doubt for Opening Round", mr: 1 },
-  "George Wardlaw":     { s: "doubt", i: "Hamstring", d: "Low-end severity, R1 possible", mr: 0 },
+  // George Wardlaw downgraded to WEEKS (worse hamstring, SEN)
   "Ben Keays":          { s: "doubt", i: "Hamstring", d: "In contention for Round 1", mr: 0 },
   "Liam Duggan":        { s: "doubt", i: "Concussion", d: "Being assessed", mr: 0 },
   "Jacob Weitering":    { s: "doubt", i: "Fractured rib", d: "Good chance for Opening Round", mr: 0 },
   "Mitch Georgiades":   { s: "doubt", i: "Hamstring awareness", d: "Being assessed from Origin", mr: 0 },
-  "Brady Hough":        { s: "doubt", i: "Ankle sprain", d: "Round 1 chance", mr: 1 },
+  // Brady Hough upgraded to MANAGED (returned to full training, SEN)
   "Callum Ah Chee":     { s: "doubt", i: "Hamstring strain", d: "Chance for Round 1", mr: 0 },
   "Brody Mihocek":      { s: "doubt", i: "Concussion", d: "Debut possibly delayed 1 round", mr: 1 },
   "Joel Amartey":       { s: "doubt", i: "Concussion", d: "Pre-season incident", mr: 0 },
   "Beau McCreery":      { s: "doubt", i: "Foot surgery", d: "Striving for campaign start", mr: 1 },
   "Jack Henderson":     { s: "doubt", i: "Sacrum stress fracture", d: "Pushing for opening weeks", mr: 1 },
-  "Tom Doedee":         { s: "doubt", i: "Wrist/knee", d: "Pushing for early selection", mr: 1 },
-  "Charlie Spargo":     { s: "doubt", i: "Post-injury rehab", d: "Hopeful Round 1", mr: 1 },
+  // Tom Doedee upgraded to MANAGED (available by season start, SEN)
+  "Charlie Spargo":     { s: "doubt", i: "Shoulder", d: "Building toward Round 1 debut", mr: 1 },
   "Brodie Kemp":        { s: "doubt", i: "Ruptured Achilles", d: "Early-season comeback", mr: 2 },
   "Ollie Florent":      { s: "doubt", i: "Concussion", d: "Entered protocols Jan 30", mr: 0 },
   "Sid Draper":         { s: "doubt", i: "Groin soreness", d: "Light duties", mr: 0 },
@@ -1065,17 +1067,23 @@ const INJURY_DATA = {
   "Sam Walsh":          { s: "doubt", i: "Back soreness", d: "Reassess for Opening Round", mr: 0 },
   "Callum Brown":       { s: "doubt", i: "Foot", d: "Came off in Feb 20 match sim", mr: 1 },
   "Jack Macrae":        { s: "doubt", i: "Hamstring", d: "May hinder practice match participation", mr: 1 },
-  "Lincoln McCarthy":   { s: "doubt", i: "Knee recovery", d: "Pushing for Round 1 selection per SEN", mr: 1 },
+  // Lincoln McCarthy upgraded to MANAGED (full training, SEN)
+  "Brent Daniels":      { s: "doubt", i: "Groin surgery recovery", d: "Eyeing Opening Round return", mr: 1 },
+  "Tom Barrass":        { s: "doubt", i: "Back", d: "In doubt for Opening Round", mr: 1 },
+  "Isaac Cumming":      { s: "doubt", i: "Hamstring (low-grade)", d: "Missed practice match", mr: 1 },
+  "Tom Cole":           { s: "doubt", i: "Finger", d: "Recent intraclub injury", mr: 1 },
+  "Jeremy Cameron":     { s: "doubt", i: "Quad + broken arm", d: "Quad strain, no certainty for Opening Round", mr: 1 },
+  "Darcy Moore":        { s: "doubt", i: "Calf (worsened)", d: "Condition worsened, Opening Round in doubt", mr: 1 },
   "Bailey Dale":        { s: "doubt", i: "Low-grade MCL (knee)", d: "Exited match sim Feb 22, racing for Rd 1", mr: 1 },
   "Lachie Neale":       { s: "doubt", i: "Leg/calf", d: "On Footywire injury list, monitoring", mr: 0 },
-  // MANAGED — Expected to play (upgrades applied Feb 24)
-  "Jeremy Cameron":     { s: "managed", i: "Quad + broken arm", d: "On track for Opening Round per club", mr: 0 },
-  "Darcy Moore":        { s: "managed", i: "Calf", d: "Says he's ready to go for Opening Round", mr: 0 },
+  // MANAGED — Expected to play (updated 2026-02-26)
+  // Jeremy Cameron downgraded to DOUBT (quad strain, SEN 23/02)
+  // Darcy Moore downgraded to DOUBT (calf worsened, SEN)
   "Nick Vlastuin":      { s: "managed", i: "Ankle fracture", d: "Back in main training, hardly missed a beat", mr: 0 },
-  "Nic Newman":         { s: "managed", i: "Patella", d: "Played VFL half, looked great, building minutes", mr: 0 },
-  "Jack Graham":        { s: "managed", i: "Hamstring", d: "Cleared, in line for Round 1", mr: 0 },
-  "Tom Gross":          { s: "managed", i: "Hamstring", d: "Cleared, in line for Round 1", mr: 0 },
-  "Brandon Starcevich": { s: "managed", i: "Calf/knee", d: "Featuring in practice match, in line for Rd 1", mr: 0 },
+  // Nic Newman upgraded to AVAILABLE (set for Opening Round, SEN)
+  "Jack Graham":        { s: "managed", i: "Hamstring strain", d: "Missed practice match, in line for Round 1", mr: 0 },
+  "Tom Gross":          { s: "managed", i: "Hamstring strain", d: "Missed practice match, in line for Round 1", mr: 0 },
+  "Brandon Starcevich": { s: "managed", i: "Calf", d: "Missed practice match, in line for Rd 1", mr: 0 },
   "Josh Dunkley":       { s: "managed", i: "Shoulder/ankle", d: "Full training, expected to play", mr: 0 },
   "Isaac Heeney":       { s: "managed", i: "Hamstring", d: "Workload managed, expected to play", mr: 0 },
   "Callum Mills":       { s: "managed", i: "Hamstring (pre-Xmas)", d: "Back in full training", mr: 0 },
@@ -1092,14 +1100,21 @@ const INJURY_DATA = {
   "Alex Pearce":        { s: "managed", i: "Stress-related", d: "Training loads managed", mr: 0 },
   "Isaac Quaynor":      { s: "managed", i: "Hamstring", d: "Likely available", mr: 0 },
   "Jy Farrar":          { s: "managed", i: "Knee knock", d: "1-2 weeks", mr: 0 },
-  "Daniel McStay":      { s: "managed", i: "Hamstring", d: "Likely available", mr: 0 },
+  "Daniel McStay":      { s: "managed", i: "Shoulder", d: "Cleared, in line for Round 1", mr: 0 },
   "Sam Lalor":          { s: "managed", i: "Post-surgery", d: "Likely Round 1", mr: 0 },
   "Tom Lynch":          { s: "managed", i: "General", d: "Building to Round 1", mr: 0 },
   "Harry Sharp":        { s: "managed", i: "Hamstring", d: "Returned to match sim", mr: 0 },
   "Todd Marshall":      { s: "managed", i: "Achilles recovery", d: "Progressing well", mr: 0 },
   "Sullivan Robey":     { s: "managed", i: "Back stress", d: "Expected Round 1", mr: 0 },
-  "Oscar Allen":        { s: "managed", i: "Knee (past)", d: "Expected Opening Round availability", mr: 0 },
+  // Oscar Allen upgraded to AVAILABLE (expected Opening Round, SEN)
   "Keidean Coleman":    { s: "managed", i: "Quad (past)", d: "Expected to push Round 1 selection", mr: 0 },
+  "James Sicily":       { s: "managed", i: "Shoulder/hip", d: "Recovered, in line for Community Series", mr: 0 },
+  "Noah Answerth":      { s: "managed", i: "Achilles", d: "Returned to training, expected available", mr: 0 },
+  "Lincoln McCarthy":   { s: "managed", i: "Knee recovery", d: "Full training, pushing for selection", mr: 0 },
+  "Brady Hough":        { s: "managed", i: "Ankle", d: "Returned to full training", mr: 0 },
+  "Tom Doedee":         { s: "managed", i: "Wrist/knee", d: "Available by season start", mr: 0 },
+  "Bailey Smith":       { s: "managed", i: "Calf", d: "Expected fit for Opening Round", mr: 0 },
+  "Shannon Neale":      { s: "managed", i: "Knee", d: "Cleared of serious injury scare", mr: 0 },
   // AVAILABLE — Recovered, no concern
   "Max Gawn":           { s: "available", i: "Finger fracture", d: "Played in Origin", mr: 0 },
   "Tom Stewart":        { s: "available", i: "Wrist cleanout", d: "Fit to play", mr: 0 },
@@ -1121,6 +1136,8 @@ const INJURY_DATA = {
   "Dougal Howard":      { s: "available", i: "Hamstring (past)", d: "Clean pre-season", mr: 0 },
   "Darcy Parish":       { s: "available", i: "Various (2025)", d: "Trained to full capacity", mr: 0 },
   "Shai Bolton":        { s: "available", i: "Ankle (post-surgery)", d: "Recovered nicely", mr: 0 },
+  "Nic Newman":         { s: "available", i: "Patella", d: "Set for Opening Round return", mr: 0 },
+  "Oscar Allen":        { s: "available", i: "Knee (past)", d: "Expected Opening Round", mr: 0 },
 };
 
 function getInjuryInfo(playerName) {

@@ -1027,7 +1027,7 @@ const INJURY_DATA = {
   "Tyson Stengle":      { s: "weeks", i: "Personal", d: "Confirmed miss Opening Round, no firm return date", mr: 4 },
   // Noah Answerth upgraded to MANAGED (returned to training, SEN 24/02)
   "Toby Bedford":       { s: "weeks", i: "Hamstring", d: "Out 4-6 weeks", mr: 4 },
-  "Archie Perkins":     { s: "weeks", i: "Groin", d: "Working towards full training", mr: 3 },
+  "Archie Perkins":     { s: "available", i: "Groin (recovered)", d: "UPGRADED: cleared for selection, available this week", mr: 0 },
   "Max King":           { s: "months", i: "Back stress fractures", d: "SYD rookie, up to 6 months out", mr: 14 },
   "Toby Conway":        { s: "weeks", i: "Foot/knee", d: "Won't be rushed back", mr: 4 },
   "Harry Cunningham":   { s: "weeks", i: "Quad", d: "Out 3-5 weeks", mr: 4 },
@@ -1080,14 +1080,14 @@ const INJURY_DATA = {
   "Callum Brown":       { s: "doubt", i: "Foot", d: "Came off in Feb 20 match sim", mr: 1 },
   "Jack Macrae":        { s: "doubt", i: "Hamstring", d: "May hinder practice match participation", mr: 1 },
   // Lincoln McCarthy upgraded to MANAGED (full training, SEN)
-  "Brent Daniels":      { s: "doubt", i: "Groin surgery recovery", d: "Eyeing Opening Round return", mr: 1 },
+  "Brent Daniels":      { s: "weeks", i: "Hamstring + groin recovery", d: "DOWNGRADED: new hamstring from match sim, out several weeks", mr: 4 },
   "Tom Barrass":        { s: "doubt", i: "Back", d: "In doubt for Opening Round", mr: 1 },
   "Isaac Cumming":      { s: "doubt", i: "Hamstring (low-grade)", d: "Missed practice match", mr: 1 },
   "Tom Cole":           { s: "doubt", i: "Finger", d: "Recent intraclub injury", mr: 1 },
   "Jeremy Cameron":     { s: "doubt", i: "Quad + broken arm", d: "Quad strain, no certainty for Opening Round", mr: 1 },
   "Darcy Moore":        { s: "doubt", i: "Calf (worsened)", d: "Condition worsened, Opening Round in doubt", mr: 1 },
   "Bailey Dale":        { s: "doubt", i: "Low-grade MCL (knee)", d: "Exited match sim Feb 22, racing for Rd 1", mr: 1 },
-  "Lachie Neale":       { s: "doubt", i: "Leg/calf", d: "On Footywire injury list, monitoring", mr: 0 },
+  "Lachie Neale":       { s: "weeks", i: "Hamstring tightness", d: "CONFIRMED out Round 1, R2 bye, expected back Round 3", mr: 2 },
   // MANAGED — Expected to play (updated 2026-02-26)
   // Jeremy Cameron downgraded to DOUBT (quad strain, SEN 23/02)
   // Darcy Moore downgraded to DOUBT (calf worsened, SEN)
@@ -1120,7 +1120,7 @@ const INJURY_DATA = {
   "Sullivan Robey":     { s: "managed", i: "Back stress", d: "Expected Round 1", mr: 0 },
   // Oscar Allen upgraded to AVAILABLE (expected Opening Round, SEN)
   "Keidean Coleman":    { s: "managed", i: "Quad (past)", d: "Expected to push Round 1 selection", mr: 0 },
-  "James Sicily":       { s: "managed", i: "Shoulder/hip", d: "Recovered, in line for Community Series", mr: 0 },
+  "James Sicily":       { s: "available", i: "Shoulder (fully recovered)", d: "UPGRADED: playing full AAMI game, no concerns", mr: 0 },
   "Noah Answerth":      { s: "managed", i: "Achilles", d: "Returned to training, expected available", mr: 0 },
   "Lincoln McCarthy":   { s: "managed", i: "Knee recovery", d: "Full training, pushing for selection", mr: 0 },
   "Brady Hough":        { s: "managed", i: "Ankle", d: "Returned to full training", mr: 0 },
@@ -1148,8 +1148,12 @@ const INJURY_DATA = {
   "Dougal Howard":      { s: "available", i: "Hamstring (past)", d: "Clean pre-season", mr: 0 },
   "Darcy Parish":       { s: "available", i: "Various (2025)", d: "Trained to full capacity", mr: 0 },
   "Shai Bolton":        { s: "available", i: "Ankle (post-surgery)", d: "Recovered nicely", mr: 0 },
-  "Nic Newman":         { s: "available", i: "Patella", d: "Set for Opening Round return", mr: 0 },
+  "Nic Newman":         { s: "weeks", i: "Suspension (striking in VFL)", d: "CHANGED: suspended for striking, delayed start", mr: 2 },
   "Oscar Allen":        { s: "available", i: "Knee (past)", d: "Expected Opening Round", mr: 0 },
+  "Errol Gulden":       { s: "available", i: "Ankle (2025)", d: "CONFIRMED FIT: 30+ disposals in practice match, all markers back", mr: 0 },
+  "Jake Soligo":        { s: "managed", i: "Irregular heartbeat", d: "Out of AAMI match vs Fremantle, expected back at training next week", mr: 0 },
+  "Fin Macrae":         { s: "weeks", i: "Shoulder", d: "Sidelined approximately one month", mr: 4 },
+  "Taylor Goad":        { s: "weeks", i: "Lateral ankle sprain", d: "3-5 weeks out", mr: 4 },
 };
 
 function getInjuryInfo(playerName) {
